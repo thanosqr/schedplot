@@ -49,38 +49,40 @@ update(SID,Encoded,Data)->
 
 store(S)->
     L=array:to_list(S#gabi.data),
-    L2=[<<0>>|lists:map(fun(X)->
-				binary:list_to_bin([<<0>>,X])
+    L2=[<<0:8>>|lists:map(fun(X)->
+				binary:list_to_bin([<<0:8>>,X])
 			end,L)],
     file:write(S#gabi.file,binary:list_to_bin(L2)),
     S#gabi{data=array:new(S#gabi.coreN),
 	   size=0}.
-	   
-    
-%PID: default: 15, max: 28 in one node
-% Common pack: 4 bytes
-% 8 time bits, 1 flag bit=0, 1 io bit, 6+8 pid bits, 8 mda bits
 
-% Extended pack: 5 bytes
-% 8 time bits, 1 flag bit=1, 1 io bit, 6+8 pid bits, 8 mda bits, 
-% 4 pid bits, 4 module pids
+% Common pack ---> 5 bytes
+% TimeIn: 8 bits  --cannot be 0--
+% Duration: 6 bits --cannot be 0--
+% MFAin = MFAout:  8 bits
+% PID: 7+8 bits
+% 3 Flag bits = 0
 
-% Long time pack: 5 bytes
-% 8 bits time, 1 flag bit=1, 21 bits time
-% 8 bits 0
+% Flag1 = 1
+% +8 MFAout bits
 
-% Flag bit = 0 -> common
-% Flag bit = 0 AND extra byte = 0  --> long time pack
-% Flag bit = 0 AND extra byte \= 0 --> extended pack
+% Flag2 = 1
+% +4+4 module bits (in, out)
 
-encode({PID,IO,MFA,Time},Famdict,PrevTime)->
-    case IO of
-	in ->
-	    IObit = 0;
-	out ->
-	    IObit = 1
-    end,
-    {NFamdict,MFAID} = encode(MFA,Famdict)},
+% Flag3 = 1
+% 3 PID bits
+% 1 flag bit
+% 0-> 4 duration bit
+% 1-> 4 module in bit
+
+% Long Time pack: Duration = 0 ---> 3 bytes
+% 2+8+8 time bits
+
+% Core Separator: 0:8
+% Write Separator: 0:16
+
+encode({PID,in,MFA,TimeIn},{PID,out,MFA,TimeOut},Famdict,PrevTime)->
+    {MFAID,NFamdict} = famdict:check(MFA,Famdict)},
     case {encode(PID),MFAID} of 
 	{ {PID6,B3,PID4}, {B4,MFA4} }->
 	    B5 = bits2bytes([PID4,MFA4]),
@@ -103,4 +105,15 @@ encode({PID,IO,MFA,Time},Famdict,PrevTime)->
     end.
 
 
+%TCHCK: assuming that if X<2^15 Y=0	    
+encode(PID)->
+    [_,X,Y]=pid_to_list(PID),
+    <<PID4:4,PID6:6,B3:8>> = <<Y:3,X:15>>,
+    case PID4 of
+	0 ->
+	    {PID6,B3};
+	_ ->
+	    {PID6,B3,PID4}
+    end.
 	    
+ bits
