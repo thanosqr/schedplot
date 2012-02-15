@@ -10,14 +10,14 @@
 
 -module(gabi).
 -compile(export_all).
-%-exposts([open/1,store/2,close/1,add/4]).
+%-exports([open/1,store/2,close/1,add/4]).
 -define(MAX_SIZE,4200).
 -define(MAX_TIME,255).
 -define(MAX_DUR, 63).
 -record(gabi,{file,
 	      famdict,
 	      data,
-	      size,
+	      size=0,
 	      coreN,
 	      prevtimes}).
 	  
@@ -29,11 +29,14 @@ open(NameData,NameFamdict,CoreN)->
     {ok,S}=file:open(NameData,[write,raw,compressed]),
     #gabi{file=S,
 	  famdict=famdict:new(NameFamdict),
-	  data=array:new(CoreN),
-	  prevtimes=array:new(CoreN)}.
+	  data=array:new([CoreN,{default,<<0:8>>}]),
+	  coreN=CoreN,
+	  prevtimes=array:new([CoreN,{default,{0,0,0}}])}.
+%TODO change default values to erlang:now()
 
 close(S)->
     SN=store(S),
+    famdict:close(S#gabi.famdict),
     file:close(SN#gabi.file).
 
 add(SID,Pack1,Pack2,S)->
@@ -46,24 +49,22 @@ add(SID,Pack1,Pack2,S)->
 		       S#gabi.famdict,
 		       array:get(SID,S#gabi.prevtimes)),
 	    NData = update(SID,Encoded,S#gabi.data),
-	    #gabi{famdict=NFamdict,
+	    S#gabi{famdict=NFamdict,
 		  data=NData,
 		  size=N+1,
 		  prevtimes=array:set(SID,NPrevTime,S#gabi.prevtimes)}
     end.
 
+
 update(SID,Encoded,Data)->
     CurrentEntry=array:get(SID,Data),
-    NewEntry=binary:list_to_bin(CurrentEntry,Encoded),
+    NewEntry=binary:list_to_bin([CurrentEntry,Encoded]),
     array:set(SID,NewEntry,Data).
 
 store(S)->
     L=array:to_list(S#gabi.data),
-    L2=[<<0:8>>|lists:map(fun(X)->
-				binary:list_to_bin([<<0:8>>,X])
-			end,L)],
-    file:write(S#gabi.file,binary:list_to_bin(L2)),
-    S#gabi{data=array:new(S#gabi.coreN),
+    file:write(S#gabi.file,binary:list_to_bin([<<0:8>>|L])),
+    S#gabi{data=array:new([S#gabi.coreN,{default,<<0:8>>}]),
 	   size=0}.
 
 % Common pack ---> 5 bytes
@@ -85,19 +86,14 @@ encode({PID,in,MFAin,TimeIn},{PID,out,MFAout,TimeOut},Famdict,PrevTime)->
     {NPrevTime,TimeBytes} = time_encode(TimeIn,PrevTime),
     PIDbytes = pid_encode(PID),
     {MFAbytes,NFamdict,Fo,Fm} = mfa_encode(MFAin,MFAout,Famdict),
-    DurationBytes = duration_rec_encode(timediff(TimeOut,TimeIn),Fo,Fm),
+    DurationBytes = duration_encode(TimeOut,TimeIn,Fo,Fm),
     Final = binary:list_to_bin([DurationBytes,TimeBytes,PIDbytes,MFAbytes]),
     {Final,NFamdict,NPrevTime}.
 
 pid_encode(PID)->
-    case pid_to_list(PID) of
-	[0,X,0] ->
-	    <<0:1,X:15>>;
-	[Z,X,C]->
-	    io:write('PID encoding problem'),
-	    io:write({Z,X,C}),
-	    io:nl()
-    end.    
+    BID=term_to_binary(PID),
+    <<X:8,Y:8,_/binary>>=binary:part(BID,byte_size(BID),-7),
+    <<0:1,X:7,Y:8>>.
 	    
 mfa_encode(MFA,MFA,Famdict)->
     {ID,NFamdict}=famdict:check(MFA,Famdict),
@@ -123,22 +119,24 @@ mfa_encode(MFAin,MFAout,Famdict)->
 	    
 time_rec_encode(Time)->
     if Time<?MAX_TIME ->
-	    <<Time:8>>;
+	    [Time];
        true -> 
 	    Left=time_rec_encode(Time-?MAX_TIME),
-	    <<?MAX_TIME:8,Left>>
+	    [?MAX_TIME|Left]
     end.
 
 time_encode(TimeIn,PrevTime)->
-    {TimeIn,time_rec_encode(timediff(TimeIn,PrevTime))}.
+    TimeList=time_rec_encode(timediff(TimeIn,PrevTime)),
+    {TimeIn,binary:list_to_bin(TimeList)}.
 
-duration_rec_encode(Duration,Fo,Fm)->
-    if Duration<?MAX_DUR ->
-	    <<Duration:6,Fo:1,Fm:1>>;
-       true ->
-	    Left=duration_rec_encode(Duration-?MAX_DUR,Fo,Fm),
-	    <<?MAX_DUR:8,Left>>
-    end.
+duration_encode(TimeIn,TimeOut,Fo,Fm)->
+    Duration=timediff(TimeOut,TimeIn),
+	if Duration<?MAX_DUR ->
+		<<Fo:1,Fm:1,Duration:6>>;
+	   true->
+		binary:list_to_bin([<<Fo:1,Fm:1,?MAX_DUR:6>>|
+				    time_rec_encode(Duration-?MAX_DUR)])
+	end.
 		
 timediff({M1,S1,U1},{M2,S2,U2})->
     ((M1-M2)*1000000+(S1-S2))*1000000+(U1-U2).

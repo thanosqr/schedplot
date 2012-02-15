@@ -29,11 +29,8 @@ check(FA,M,D)->
 		    ID1=ID1t
 	    end
     end,
-    {combine(ID1,ID2),DN}.
-			
-%TLL
-combine(ID1,ID2)->
-    ID1*10+ID2.
+    {{ID1,ID2},DN}.
+
 
 new(Name)->
     {ok,F}=file:open(Name,[raw,write]),
