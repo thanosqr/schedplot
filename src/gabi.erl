@@ -10,13 +10,16 @@
 
 -module(gabi).
 -compile(export_all).
-%-exposts([open/1,store/2,close/1,add/3]).
+%-exposts([open/1,store/2,close/1,add/4]).
 -define(MAX_SIZE,4200).
+-define(MAX_TIME,255).
+-define(MAX_DUR, 63).
 -record(gabi,{file,
 	      famdict,
 	      data,
 	      size,
-	      coreN}).
+	      coreN,
+	      prevtimes}).
 	  
 
 %% MFALib = [{F,A,[M]}]
@@ -24,22 +27,29 @@
 
 open(NameData,NameFamdict,CoreN)->
     {ok,S}=file:open(NameData,[write,raw,compressed]),
-    #gabi{file=S,famdict=famdict:new(NameFamdict),data=array:new(CoreN)}.
+    #gabi{file=S,
+	  famdict=famdict:new(NameFamdict),
+	  data=array:new(CoreN),
+	  prevtimes=array:new(CoreN)}.
 
 close(S)->
     SN=store(S),
     file:close(SN#gabi.file).
 
-add(SID,Pack,S)->
+add(SID,Pack1,Pack2,S)->
     case S#gabi.size of
 	?MAX_SIZE ->
-	    add(SID,Pack,store(S));
+	    add(SID,Pack1,Pack2,store(S));
 	N ->
-	    {NFamdict,Encoded} = encode(Pack,S#gabi.famdict),
+	    {Encoded,NFamdict,NPrevTime} = 
+		encode(Pack1,Pack2,
+		       S#gabi.famdict,
+		       array:get(SID,S#gabi.prevtimes)),
 	    NData = update(SID,Encoded,S#gabi.data),
 	    #gabi{famdict=NFamdict,
 		  data=NData,
-		  size=N+1}
+		  size=N+1,
+		  prevtimes=array:set(SID,NPrevTime,S#gabi.prevtimes)}
     end.
 
 update(SID,Encoded,Data)->
@@ -61,59 +71,75 @@ store(S)->
 % Duration: 6 bits --cannot be 0--
 % MFAin = MFAout:  8 bits
 % PID: 7+8 bits
-% 3 Flag bits = 0
+% Flag
 
-% Flag1 = 1
-% +8 MFAout bits
-
-% Flag2 = 1
-% +4+4 module bits (in, out)
-
-% Flag3 = 1
-% 3 PID bits
-% 1 flag bit
-% 0-> 4 duration bit
-% 1-> 4 module in bit
-
-% Long Time pack: Duration = 0 ---> 3 bytes
-% 2+8+8 time bits
-
-% Core Separator: 0:8
-% Write Separator: 0:16
-
-encode({PID,in,MFA,TimeIn},{PID,out,MFA,TimeOut},Famdict,PrevTime)->
-    {MFAID,NFamdict} = famdict:check(MFA,Famdict)},
-    case {encode(PID),MFAID} of 
-	{ {PID6,B3,PID4}, {B4,MFA4} }->
-	    B5 = bits2bytes([PID4,MFA4]),
-	    B2 = bits2bytes([IObit,[1],PID6]);
-	{ {PID6,B3,PID4}, B4 }->
-	    B5 = bits2bytes([PID4,[0,0,0,0]]),
-	    B2 = bits2bytes([IObit,[1],PID6]);
-	{ {PID6,B3}, {B4,MFA4} }->
-	    B5 = bits2bytes([[0,0,0,0],MFA4]),
-	    B2 = bits2bytes([IObit,[1],PID6]);
-	{ {PID6,B3}, {B4} }->
-	    B5 = [],
-	    B2 = bits2bytes([IObit,0,PID6])
-    end,
-    case timediff(Time,PrevTime) of
-	{B1}->
-	    mergepack([B1,B2,B3,B4,B5]);
-	{B1,LongPacks} ->
-	    mergepack([B1,B2,B3,B4,B5,LongPacks])
-    end.
+% if TimeIN = max -> 1 more byte [repeat]
+% if Duration = max -> 1 more byte [repeat]
+% Flag = 1 -> long PID (not supported yet)
 
 
-%TCHCK: assuming that if X<2^15 Y=0	    
-encode(PID)->
-    [_,X,Y]=pid_to_list(PID),
-    <<PID4:4,PID6:6,B3:8>> = <<Y:3,X:15>>,
-    case PID4 of
-	0 ->
-	    {PID6,B3};
-	_ ->
-	    {PID6,B3,PID4}
+% Core  Separator: <<0:6,0:1>>
+% Write Separator: <<0:6,1:2>>
+
+encode({PID,in,MFAin,TimeIn},{PID,out,MFAout,TimeOut},Famdict,PrevTime)->
+    {NPrevTime,TimeBytes} = time_encode(TimeIn,PrevTime),
+    PIDbytes = pid_encode(PID),
+    {MFAbytes,NFamdict,Fo,Fm} = mfa_encode(MFAin,MFAout,Famdict),
+    DurationBytes = duration_rec_encode(timediff(TimeOut,TimeIn),Fo,Fm),
+    Final = binary:list_to_bin([DurationBytes,TimeBytes,PIDbytes,MFAbytes]),
+    {Final,NFamdict,NPrevTime}.
+
+pid_encode(PID)->
+    case pid_to_list(PID) of
+	[0,X,0] ->
+	    <<0:1,X:15>>;
+	[Z,X,C]->
+	    io:write('PID encoding problem'),
+	    io:write({Z,X,C}),
+	    io:nl()
+    end.    
+	    
+mfa_encode(MFA,MFA,Famdict)->
+    {ID,NFamdict}=famdict:check(MFA,Famdict),
+    case ID of
+	{IDf,0}->
+	    {<<IDf:8>>,NFamdict,0,0};
+	{IDf,IDm}->
+	    {<<IDf:8,IDm:4,0:4>>,NFamdict,0,1}
+    end;
+mfa_encode(MFAin,MFAout,Famdict)->
+    {ID1,NFamdict1}=famdict:check(MFAin,Famdict),
+    {ID2,NFamdict}=famdict:check(MFAout,NFamdict1),
+    case {ID1,ID2} of
+	{{ID1f,0},{ID2f,0}}->
+	    {<<ID1f:8,ID2f:8,0:1>>,NFamdict,1,0};
+	{{ID1f,ID1m},{ID2f,0}}->
+	    {<<ID1f:8,ID2f:8,1:1,ID1m:4,0:4>>,NFamdict,1,1};
+	{{ID1f,0},{ID2f,ID2m}}->
+	    {<<ID1f:8,ID2f:8,0:4,ID2m:4>>,NFamdict,1,1};
+	{{ID1f,ID1m},{ID2f,ID2m}}->
+	    {<<ID1f:8,ID2f:8,ID1m:4,ID2m:4>>,NFamdict1,1,1}
     end.
 	    
- bits
+time_rec_encode(Time)->
+    if Time<?MAX_TIME ->
+	    <<Time:8>>;
+       true -> 
+	    Left=time_rec_encode(Time-?MAX_TIME),
+	    <<?MAX_TIME:8,Left>>
+    end.
+
+time_encode(TimeIn,PrevTime)->
+    {TimeIn,time_rec_encode(timediff(TimeIn,PrevTime))}.
+
+duration_rec_encode(Duration,Fo,Fm)->
+    if Duration<?MAX_DUR ->
+	    <<Duration:6,Fo:1,Fm:1>>;
+       true ->
+	    Left=duration_rec_encode(Duration-?MAX_DUR,Fo,Fm),
+	    <<?MAX_DUR:8,Left>>
+    end.
+		
+timediff({M1,S1,U1},{M2,S2,U2})->
+    ((M1-M2)*1000000+(S1-S2))*1000000+(U1-U2).
+
