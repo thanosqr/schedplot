@@ -1,9 +1,9 @@
 -module(famdict).
 -compile(export_all).
 -define(UD,dict).
--define(MAX_DICT_SIZE,256).
+-define(MAX_DICT_SIZE,255).
 -define(MAX_TOTAL_SIZE,42).
--define(MAX_MODULE_SIZE,8).
+-define(MAX_MODULE_SIZE,15).
 
 -record(famdict, {current,
 		  old=[],
@@ -95,14 +95,3 @@ mlookup(M,[_|Ms],N) ->
 close(D)->
     save([D#famdict.current|D#famdict.old],D#famdict.file),
     file:close(D#famdict.file).
-
-
-test()->
-    D0=new(lala),
-    {ID1,D1}=check({m1,f1,1},D0),
-    {ID2,D2}=check({m1,f2,1},D1),
-    {ID3,D3}=check({m2,f1,1},D2),
-    {ID4,D4}=check({m2,f1,1},D3),
-    io:write(D4),io:nl(),
-    close(D4),
-    {D4,ID1,ID2,ID3,ID4}.

@@ -11,7 +11,7 @@
 -module(gabi).
 -compile(export_all).
 %-exports([open/1,store/2,close/1,add/4]).
--define(MAX_SIZE,4200).
+-define(MAX_SIZE,42).
 -define(MAX_TIME,255).
 -define(MAX_DUR, 63).
 -record(gabi,{file,
@@ -31,8 +31,8 @@ open(NameData,NameFamdict,CoreN)->
 	  famdict=famdict:new(NameFamdict),
 	  data=array:new([CoreN,{default,<<0:8>>}]),
 	  coreN=CoreN,
-	  prevtimes=array:new([CoreN,{default,{0,0,0}}])}.
-%TODO change default values to erlang:now()
+	  prevtimes=array:new([CoreN,{default,erlang:now()}])}.
+
 
 close(S)->
     SN=store(S),
@@ -67,6 +67,7 @@ store(S)->
     S#gabi{data=array:new([S#gabi.coreN,{default,<<0:8>>}]),
 	   size=0}.
 
+
 % Common pack ---> 5 bytes
 % TimeIn: 8 bits  --cannot be 0--
 % Duration: 6 bits --cannot be 0--
@@ -88,7 +89,13 @@ encode({PID,in,MFAin,TimeIn},{PID,out,MFAout,TimeOut},Famdict,PrevTime)->
     {MFAbytes,NFamdict,Fo,Fm} = mfa_encode(MFAin,MFAout,Famdict),
     DurationBytes = duration_encode(TimeOut,TimeIn,Fo,Fm),
     Final = binary:list_to_bin([DurationBytes,TimeBytes,PIDbytes,MFAbytes]),
-    {Final,NFamdict,NPrevTime}.
+    {Final,NFamdict,NPrevTime};
+encode({PID1,in,MFA1,T1},{PID2,out,MFA2,T2},F,P) ->
+    io:write('#--diff PID error--'),
+    io:write({PID1,MFA1,PID2,MFA2,timediff(T2,T1)}),
+
+    io:nl(),
+    {<<0:8>>,F,P}.
 
 pid_encode(PID)->
     BID=term_to_binary(PID),
@@ -108,9 +115,9 @@ mfa_encode(MFAin,MFAout,Famdict)->
     {ID2,NFamdict}=famdict:check(MFAout,NFamdict1),
     case {ID1,ID2} of
 	{{ID1f,0},{ID2f,0}}->
-	    {<<ID1f:8,ID2f:8,0:1>>,NFamdict,1,0};
+	    {<<ID1f:8,ID2f:8>>,NFamdict,1,0};
 	{{ID1f,ID1m},{ID2f,0}}->
-	    {<<ID1f:8,ID2f:8,1:1,ID1m:4,0:4>>,NFamdict,1,1};
+	    {<<ID1f:8,ID2f:8,ID1m:4,0:4>>,NFamdict,1,1};
 	{{ID1f,0},{ID2f,ID2m}}->
 	    {<<ID1f:8,ID2f:8,0:4,ID2m:4>>,NFamdict,1,1};
 	{{ID1f,ID1m},{ID2f,ID2m}}->
@@ -141,3 +148,16 @@ duration_encode(TimeIn,TimeOut,Fo,Fm)->
 timediff({M1,S1,U1},{M2,S2,U2})->
     ((M1-M2)*1000000+(S1-S2))*1000000+(U1-U2).
 
+
+test()->
+    P1={c:pid(0,42,0),in,{koko,lala,3}, {0,0,3}},
+    P2={c:pid(0,42,0),out,{koko,lala,3},{0,0,5}},
+    P3={c:pid(0,442,0),in,{kokop,lala,3},{0,1,5}},
+    P4={c:pid(0,442,0),out,{kokop,lalak,3},{0,2,0}},
+    P5={c:pid(0,442,0),in,{koko,lala,3},{0,2,1}},
+    P6={c:pid(0,442,0),out,{koko,lala,3},{0,2,2}},
+    G=open(gabitest,famdisktest,4),
+    G1=add(1,P1,P2,G),
+    G2=add(2,P3,P4,G1),
+    G3=add(2,P5,P6,G2),
+    close(G3).
