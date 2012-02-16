@@ -16,6 +16,9 @@
 test(M)->
     qcore:trace(test,test,[M],[no_exit]).
 
+tw(M)->
+    qcore:trace(timer_wheel,wheel,[M]).
+
 trace(M,F,Args)->
     trace(M,F,Args,?DEFAULT_GNAME,?DEFAULT_FNAME,?DEFAULT_COREN,?DEFAULT_FLAGS).
 

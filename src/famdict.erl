@@ -2,7 +2,7 @@
 -compile(export_all).
 -define(UD,dict).
 -define(MAX_DICT_SIZE,255).
--define(MAX_TOTAL_SIZE,42).
+-define(MAX_TOTAL_SIZE,420).
 -define(MAX_MODULE_SIZE,15).
 
 -record(famdict, {current,
@@ -37,6 +37,7 @@ new(Name)->
     #famdict{current=?UD:new(),file=F}.
 		 
 add_function(FA,M,D)->
+io:write('-------'),io:nl(),
     case D#famdict.size of
 	?MAX_DICT_SIZE ->
 	    DN = add_slot(D),

@@ -11,7 +11,7 @@
 -module(gabi).
 -compile(export_all).
 %-exports([open/1,store/2,close/1,add/4]).
--define(MAX_SIZE,42).
+-define(MAX_SIZE,1).
 -define(MAX_TIME,255).
 -define(MAX_DUR, 63).
 -record(gabi,{file,
@@ -82,20 +82,22 @@ store(S)->
 
 % Core  Separator: <<0:6,0:1>>
 % Write Separator: <<0:6,1:2>>
+encode(P1,P2,F,P)->
+    B=term_to_binary({P1,P2}),
+    {B,F,P}.
+%% encode({PID,in,MFAin,TimeIn},{PID,out,MFAout,TimeOut},Famdict,PrevTime)->
+%%     {NPrevTime,TimeBytes} = time_encode(TimeIn,PrevTime),
+%%     PIDbytes = pid_encode(PID),
+%%     {MFAbytes,NFamdict,Fo,Fm} = mfa_encode(MFAin,MFAout,Famdict),
+%%     DurationBytes = duration_encode(TimeOut,TimeIn,Fo,Fm),
+%%     Final = binary:list_to_bin([DurationBytes,TimeBytes,PIDbytes,MFAbytes]),
+%%     {Final,NFamdict,NPrevTime};
+%% encode({PID1,in,MFA1,T1},{PID2,out,MFA2,T2},F,P) ->
+%%     io:write('#--diff PID error--'),
+%%     io:write({PID1,MFA1,PID2,MFA2,timediff(T2,T1)}),
 
-encode({PID,in,MFAin,TimeIn},{PID,out,MFAout,TimeOut},Famdict,PrevTime)->
-    {NPrevTime,TimeBytes} = time_encode(TimeIn,PrevTime),
-    PIDbytes = pid_encode(PID),
-    {MFAbytes,NFamdict,Fo,Fm} = mfa_encode(MFAin,MFAout,Famdict),
-    DurationBytes = duration_encode(TimeOut,TimeIn,Fo,Fm),
-    Final = binary:list_to_bin([DurationBytes,TimeBytes,PIDbytes,MFAbytes]),
-    {Final,NFamdict,NPrevTime};
-encode({PID1,in,MFA1,T1},{PID2,out,MFA2,T2},F,P) ->
-    io:write('#--diff PID error--'),
-    io:write({PID1,MFA1,PID2,MFA2,timediff(T2,T1)}),
-
-    io:nl(),
-    {<<0:8>>,F,P}.
+%%     io:nl(),
+%%     {<<0:8>>,F,P}.
 
 pid_encode(PID)->
     BID=term_to_binary(PID),
