@@ -36,7 +36,10 @@ trace(M,F,Args,GName,FName,CoreN,Flags)->
 			   scheduler_id,
 			   timestamp,
 			  {tracer,PID}]),
+    T1=erlang:now(),
     apply(M,F,Args),
+    T2 = erlang:now(),
+    io:write(gabi:timediff(T2,T1)),io:nl(),
     case lists:member(no_exit,Flags) of
 	true  -> ok;
 	false -> end_tracing()
@@ -61,36 +64,42 @@ trace_recorder(GabiName,FamdName,CoreN,PID)->
     Gabi=gabi:open(GabiName,FamdName,CoreN),
     Temps = array:new([CoreN,{default,null}]),
     PID!{self()},
-    trace_recorder(Gabi,Temps).
-trace_recorder(Gabi,Temps)->
+    trace_recorder_(Gabi,Temps,0,0).
+trace_recorder_(Gabi,Temps,RestTime,Packets)->
+
     receive
 	exit->
+	    io:write({RestTime,Packets}),
 	    gabi:close(Gabi);
 	{trace_ts,PID2,IO2,SID2,MFA2,Time2} ->
+	    T1=erlang:now(),
 	    case MFA2 of
-		{io,wait_io_mon_reply,2} ->
-		    % io:wait_io_mon_reply/2 appears to only enter the schedulers (and never leave)
-		    % possibly a problem with trace&io; temporarily we ignore those messages
-		    %io:write('-----------iomon error'),io:nl(),
-		    NGabi = Gabi,
-		    NTemps = Temps;
-		_ ->
-		    P2={PID2,IO2,MFA2,Time2},
-		    case IO2 of
-			in -> 
-			    NTemps = array:set(SID2,P2,Temps),
-			    NGabi = Gabi;
-			out ->
-			    P1=array:get(SID2,Temps),
-			    case P1 of
-				null ->
-				    NTemps = Temps,
-				    NGabi = Gabi;
-				_ ->
-				    NTemps=array:set(SID2,null,Temps),
-				    NGabi=gabi:add(SID2,P1,P2,Gabi)
-			    end
-		    end
+	    	{io,wait_io_mon_reply,2} ->
+	    	    % io:wait_io_mon_reply/2 appears to only enter the schedulers (and never leave)
+	    	    % possibly a problem with trace&io; temporarily we ignore those messages
+	    	    %io:write('-----------iomon error'),io:nl(),
+	    	    NGabi = Gabi,
+	    	    NTemps = Temps;
+	    	_ ->
+	    	    P2={PID2,IO2,MFA2,Time2},
+	    	    case IO2 of
+	    		in -> 
+	    		    NTemps = array:set(SID2,P2,Temps),
+	    		    NGabi = Gabi;
+	    		out ->
+	    		    P1=array:get(SID2,Temps),
+	    		    case P1 of
+	    			null ->
+	    			    NTemps = Temps,
+	    			    NGabi = Gabi;
+	    			_ ->
+	    			    NTemps=array:set(SID2,null,Temps),
+	    			   % NGabi =Gabi
+	    			   NGabi=gabi:add(SID2,P1,P2,Gabi)
+	    		    end
+	    	    end
 	    end,
-	    trace_recorder(NGabi,NTemps)
+	    T2=erlang:now(),
+	    trace_recorder_(NGabi,NTemps,gabi:timediff(T2,T1)+RestTime,Packets+1)
+%	    trace_recorder_(NGabi,NTemps,RestTime,Packets+1)
     end.

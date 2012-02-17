@@ -37,7 +37,6 @@ new(Name)->
     #famdict{current=?UD:new(),file=F}.
 		 
 add_function(FA,M,D)->
-io:write('-------'),io:nl(),
     case D#famdict.size of
 	?MAX_DICT_SIZE ->
 	    DN = add_slot(D),

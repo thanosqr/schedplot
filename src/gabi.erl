@@ -11,7 +11,7 @@
 -module(gabi).
 -compile(export_all).
 %-exports([open/1,store/2,close/1,add/4]).
--define(MAX_SIZE,1).
+-define(MAX_SIZE,inf).
 -define(MAX_TIME,255).
 -define(MAX_DUR, 63).
 -record(gabi,{file,
@@ -41,24 +41,25 @@ close(S)->
 
 add(SID,Pack1,Pack2,S)->
     case S#gabi.size of
-	?MAX_SIZE ->
-	    add(SID,Pack1,Pack2,store(S));
-	N ->
-	    {Encoded,NFamdict,NPrevTime} = 
-		encode(Pack1,Pack2,
-		       S#gabi.famdict,
-		       array:get(SID,S#gabi.prevtimes)),
-	    NData = update(SID,Encoded,S#gabi.data),
-	    S#gabi{famdict=NFamdict,
-		  data=NData,
-		  size=N+1,
-		  prevtimes=array:set(SID,NPrevTime,S#gabi.prevtimes)}
+    	?MAX_SIZE ->
+    	    add(SID,Pack1,Pack2,store(S));
+    	N ->
+    	    {Encoded,NFamdict,NPrevTime} = 
+    		encode(Pack1,Pack2,
+    		       S#gabi.famdict,
+    		       array:get(SID,S#gabi.prevtimes)),
+    	    NData = update(SID,Encoded,S#gabi.data),
+    	    S#gabi{famdict=NFamdict,
+    		  data=NData,
+    		  size=N+1,
+    		  prevtimes=array:set(SID,NPrevTime,S#gabi.prevtimes)}
     end.
+
 
 
 update(SID,Encoded,Data)->
     CurrentEntry=array:get(SID,Data),
-    NewEntry=binary:list_to_bin([CurrentEntry,Encoded]),
+    NewEntry=[Encoded|CurrentEntry],
     array:set(SID,NewEntry,Data).
 
 store(S)->
@@ -82,22 +83,26 @@ store(S)->
 
 % Core  Separator: <<0:6,0:1>>
 % Write Separator: <<0:6,1:2>>
-encode(P1,P2,F,P)->
-    B=term_to_binary({P1,P2}),
-    {B,F,P}.
-%% encode({PID,in,MFAin,TimeIn},{PID,out,MFAout,TimeOut},Famdict,PrevTime)->
-%%     {NPrevTime,TimeBytes} = time_encode(TimeIn,PrevTime),
-%%     PIDbytes = pid_encode(PID),
-%%     {MFAbytes,NFamdict,Fo,Fm} = mfa_encode(MFAin,MFAout,Famdict),
-%%     DurationBytes = duration_encode(TimeOut,TimeIn,Fo,Fm),
-%%     Final = binary:list_to_bin([DurationBytes,TimeBytes,PIDbytes,MFAbytes]),
-%%     {Final,NFamdict,NPrevTime};
-%% encode({PID1,in,MFA1,T1},{PID2,out,MFA2,T2},F,P) ->
-%%     io:write('#--diff PID error--'),
-%%     io:write({PID1,MFA1,PID2,MFA2,timediff(T2,T1)}),
-
-%%     io:nl(),
-%%     {<<0:8>>,F,P}.
+%% encode(P1,P2,F,P)->
+%%     B=term_to_binary({P1,P2}),
+%%     {B,F,P}.
+encode({PID,in,MFAin,TimeIn},{PID,out,MFAout,TimeOut},Famdict,PrevTime)->
+    {NPrevTime,TimeBytes} = time_encode(TimeIn,PrevTime),
+    %NPrevTime = PrevTime,TimeBytes=0,
+    PIDbytes = pid_encode(PID),
+    %PIDbytes = 0,
+    {MFAbytes,NFamdict,Fo,Fm} = mfa_encode(MFAin,MFAout,Famdict),
+    %MFAbytes = 0, Fo=0, Fm=0, NFamdict=Famdict,
+    DurationBytes = duration_encode(TimeOut,TimeIn,Fo,Fm),
+    %DurationBytes = 0,
+    %Final = binary:list_to_bin([DurationBytes,TimeBytes,PIDbytes,MFAbytes]),
+    %Final = <<DurationBytes/binary, TimeBytes/binary,PIDbytes/binary,MFAbytes/binary>>,
+    {[DurationBytes,TimeBytes,PIDbytes,MFAbytes],NFamdict,NPrevTime};
+encode({PID1,in,MFA1,T1},{PID2,out,MFA2,T2},F,P) ->
+    io:write('#--diff PID error--'),
+    io:write({PID1,MFA1,PID2,MFA2,timediff(T2,T1)}),
+    io:nl(),
+    {<<0:8>>,F,P}.
 
 pid_encode(PID)->
     BID=term_to_binary(PID),
