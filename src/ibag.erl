@@ -88,3 +88,33 @@ get_mfa(Fo,Fm,Bytes)->
 
 pack(Duration,Time,_PID,_MFA)->
     {Time,Duration}.
+
+get_times(Bytes)->
+    get_packet(Bytes).
+
+
+get_unit(CurrentTime,Times,Bytes)->
+    get_unit(CurrentTime,Times,Bytes,?UNIT_SIZE,0)
+get_unit(CurrentTime,Times,Bytes,0,Acc)->
+    {Acc/?UNIT_SIZE,CurrentTime,{TimeStart,Duration},Bytes};
+get_unit(CurrentTime,Times,Bytes,N,Acc) -> 
+    case get_one(CurrentTime,Times,Bytes) of
+	end_of_file->
+	    end_of_file;
+	{Val,NCurrentTime,NTimes,NBytes} ->
+	    get_one(NCurrentTime,NTimes,NBytes,N-1,Acc+Val)
+    end.
+get_one(CurrentTime,{TimeStart,Duration},Bytes)->
+    if CurrentTime<TimeStart->
+	    {0,CurrentTime+1,{TimeStart,Duration}};
+       (CurrentTime>=Timestart) and (Duration>0)->
+	    {1,CurrentTime+1,{TimeStart,Duration-1}};
+       Duration==0->
+	    =get_times(Bytes),
+	    case get_times(Bytes) of
+		end_of_file->
+		    end_of_file;
+		{NTimeStart,NDuration,NBytes} ->
+		    get_one(CurrentTime,{NTimeStart,NDuration},NBytes)
+	    end
+    end.

@@ -8,64 +8,61 @@
 %% normally one byte is used for the time difference but it same cases more bytes may be required
 %% benchmarks should be done to determine the optimum default number
 
--module(gabi).
+-module(pabi).
 -compile(export_all).
 %-exports([open/1,store/2,close/1,add/4]).
 -define(MAX_SIZE,inf).
 -define(MAX_TIME,255).
 -define(MAX_DUR, 63).
--record(gabi,{file,
+-record(pabi,{file,
 	      famdict,
 	      data,
 	      size=0,
-	      coreN,
-	      prevtimes}).
+	      prevtime}).
 	  
 
 %% MFALib = [{F,A,[M]}]
 
 
-open(NameData,NameFamdict,CoreN)->
+open(NameData,NameFamdict,PrevTime)->
     {ok,S}=file:open(NameData,[write,raw,compressed]),
-    #gabi{file=S,
+    #pabi{file=S,
 	  famdict=famdict:new(NameFamdict),
-	  data=array:new([CoreN,{default,<<0:8>>}]),
-	  coreN=CoreN,
-	  prevtimes=array:new([CoreN,{default,erlang:now()}])}.
+	  data=[],
+	  prevtime=PrevTime}.
 
 
 close(S)->
     SN=store(S),
-    famdict:close(S#gabi.famdict),
-    file:close(SN#gabi.file).
+    famdict:close(S#pabi.famdict),
+    file:close(SN#pabi.file).
 
-add(SID,Pack1,Pack2,S)->
-    case S#gabi.size of
+add(Pack1,Pack2,S)->
+    case S#pabi.size of
     	?MAX_SIZE ->
-    	    add(SID,Pack1,Pack2,store(S));
+    	    add(Pack1,Pack2,store(S));
     	N ->
     	    {Encoded,NFamdict,NPrevTime} = 
     		encode(Pack1,Pack2,
-    		       S#gabi.famdict,
-    		       array:get(SID,S#gabi.prevtimes)),
-    	    NData = update(SID,Encoded,S#gabi.data),
-    	    S#gabi{famdict=NFamdict,
+    		       S#pabi.famdict,
+    		       S#pabi.prevtime),
+    	    NData = update(Encoded,S#pabi.data),
+    	    S#pabi{famdict=NFamdict,
     		  data=NData,
     		  size=N+1,
-    		  prevtimes=array:set(SID,NPrevTime,S#gabi.prevtimes)}
+    		  prevtime=NPrevTime}
     end.
 
 
 
-update(SID,Encoded,Data)->
-    CurrentEntry=array:get(SID,Data),
-    NewEntry=[Encoded|CurrentEntry],
-    array:set(SID,NewEntry,Data).
+update(Encoded,Data)->
+    [Encoded|Data].
 
 store(S)->
-    L=array:to_list(S#gabi.data),
-    file:write(S#gabi.file,binary:list_to_bin([<<1:7,0:7>>|L])),
-    S#gabi{data=array:new([S#gabi.coreN,{default,<<0:8>>}]),
+    L=lists:reverse(S#pabi.data),
+    B=binary:list_to_bin(L),
+    file:write(S#pabi.file,B),
+    S#pabi{data=[],
 	   size=0}.
 
 
@@ -88,15 +85,9 @@ store(S)->
 %%     {B,F,P}.
 encode({PID,in,MFAin,TimeIn},{PID,out,MFAout,TimeOut},Famdict,PrevTime)->
     {NPrevTime,TimeBytes} = time_encode(TimeIn,PrevTime),
-    %NPrevTime = PrevTime,TimeBytes=0,
     PIDbytes = pid_encode(PID),
-    %PIDbytes = 0,
     {MFAbytes,NFamdict,Fo,Fm} = mfa_encode(MFAin,MFAout,Famdict),
-    %MFAbytes = 0, Fo=0, Fm=0, NFamdict=Famdict,
     DurationBytes = duration_encode(TimeOut,TimeIn,Fo,Fm),
-    %DurationBytes = 0,
-    %Final = binary:list_to_bin([DurationBytes,TimeBytes,PIDbytes,MFAbytes]),
-    %Final = <<DurationBytes/binary, TimeBytes/binary,PIDbytes/binary,MFAbytes/binary>>,
     {[DurationBytes,TimeBytes,PIDbytes,MFAbytes],NFamdict,NPrevTime};
 encode({PID1,in,MFA1,T1},{PID2,out,MFA2,T2},F,P) ->
     io:write('#--diff PID error--'),
@@ -156,15 +147,22 @@ timediff({M1,S1,U1},{M2,S2,U2})->
     ((M1-M2)*1000000+(S1-S2))*1000000+(U1-U2).
 
 
-test()->
-    P1={c:pid(0,42,0),in,{koko,lala,3}, {0,0,3}},
-    P2={c:pid(0,42,0),out,{koko,lala,3},{0,0,5}},
-    P3={c:pid(0,442,0),in,{kokop,lala,3},{0,1,5}},
-    P4={c:pid(0,442,0),out,{kokop,lalak,3},{0,2,0}},
-    P5={c:pid(0,442,0),in,{koko,lala,3},{0,2,1}},
-    P6={c:pid(0,442,0),out,{koko,lala,3},{0,2,2}},
-    G=open(gabitest,famdisktest,4),
-    G1=add(1,P1,P2,G),
-    G2=add(2,P3,P4,G1),
-    G3=add(2,P5,P6,G2),
-    close(G3).
+t(X)->
+    P=spawn(pabi,test,[X]),
+    receive
+	exit->
+	    P!exit
+    end.
+
+
+test(X)->
+    P=string:concat(atom_to_list(kola),integer_to_list(X)),
+    F=string:concat(atom_to_list(lalo),integer_to_list(X)),
+    Pabi=pabi:open(P,F,erlang:now()),
+ %   P2=pabi:add({c:pid(0,42,0),in,{lala,lolo,2},erlang:now()},{c:pid(0,42,0),out,{lala,lolo,2},erlang:now()},Pabi),
+ %  P3=pabi:add({c:pid(0,42,0),in,{lala,lolo,2},erlang:now()},{c:pid(0,42,0),out,{lala,lolo,2},erlang:now()},P2),
+    receive
+	exit->
+	    pabi:close(Pabi)
+    end.
+    
