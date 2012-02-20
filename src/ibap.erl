@@ -18,7 +18,7 @@
 	     datalength=0}).
 
 -define(MAX_OUT,1000).
--define(READ_N,1000000).
+-define(READ_N,100000).
 -define(MAX_DUR,63).
 -define(MAX_TIME,255).
 	       
@@ -35,14 +35,12 @@ get_packet(Bytes)->
     end.
 
 get_byte(Bytes)->
-%    io:write(Bytes#bytes.file),io:nl(),
     case Bytes#bytes.left of
 	0 ->
 	    case file:read(Bytes#bytes.file,?READ_N) of
 		{ok,[D|Data]}->
 		    {D,Bytes#bytes{left=erlang:length(Data),data=Data}};
 		eof -> 
-		    io:write(lala),
 		    file:close(Bytes#bytes.file),
 		    end_of_file
 	    end;
@@ -168,17 +166,19 @@ insert(Out,Val)->
     if Size > ?MAX_OUT ->
 	    save(Out);
         Size =< ?MAX_OUT->
-	    Out#out{data=[Val|Out#out.data]}
+	    Out#out{data=[Val|Out#out.data],size=Size+1}
     end.
 
 save(Out)->
+%    io:write(Out#out.data),
     dets:insert(Out#out.file,{{Out#out.coreID, Out#out.zoom, Out#out.timestart},Out#out.data}),
-    Out#out{data=[],timestart=Out#out.timestart+?MAX_OUT, datalength=Out#out.datalength+length(Out#out.data)}.
+    Out#out{data=[],timestart=Out#out.timestart+?MAX_OUT, size=0, datalength=Out#out.datalength+length(Out#out.data)}.
 
 
 close_out(Out)->
-    dets:close(save(Out)),
-    Out#out.datalength+length(Out#out.data).
+    Out2=save(Out),
+    dets:close(Out2#out.file),
+    Out2#out.datalength.
 
 open_out(OutName,CoreID)->
     {ok,File}=dets:open_file(OutName,[]),
@@ -209,11 +209,11 @@ decode_all(OutName,InName,GU,{FromCore,ToCore})->
     lists:map(fun(CoreID)->
 		      spawn(ibap,decoder,[OutName,InName,CoreID,GU,self()])
 	      end, lists:seq(FromCore,ToCore)),
-    lists:map(fun(_)->
-		      receive
-			  done->
-			      ok
-		      end end, lists:seq(FromCore,ToCore)).
+    lists:max(lists:map(fun(_)->
+				receive
+			  N->
+			      N
+		      end end, lists:seq(FromCore,ToCore))).
     
 
 
@@ -222,16 +222,22 @@ generate_zoom_lvls(Dets,{FromCore,ToCore},MaxZoomOut)->
 		      lists:map(fun(CoreID)->
 					Keys=dets:match(Dets,{{CoreID,OldZoom,'$3'},'_'}),
 					SKeys=lists:sort(Keys),
+					io:write(SKeys),io:nl(),
 					traverse(Dets,CoreID,OldZoom,SKeys)
 				end, lists:seq(FromCore,ToCore))
-	      end, lists:seq(1,MaxZoomOut)).
+	      end, lists:seq(0,MaxZoomOut)).
 
-traverse(Dets,CoreID,OldZoom,[TimeIn1,TimeIn2|Keys])->
-    [Values1]=dets:lookup(Dets,{CoreID,OldZoom,TimeIn1}),
-    [Values2]=dets:lookup(Dets,{CoreID,OldZoom,TimeIn2}),
-    Values=lists:zipwith(fun(X,Y)->(X+Y) div 2 end, Values1,Values2),
-    dets:insert(Dets,{{CoreID,OldZoom+1,TimeIn1},Values}),
-    traverse(Dets,CoreID,OldZoom,Keys);
+traverse(Dets,CoreID,OldZoom,[[TimeIn1],[TimeIn2]|Keys])->
+    [{_,Values1}]=dets:lookup(Dets,{CoreID,OldZoom,TimeIn1}),
+    [{_,Values2}]=dets:lookup(Dets,{CoreID,OldZoom,TimeIn2}),
+io:nl(),io:write('Val1: '),io:write(Values1),io:nl(),io:write('Val2: '),io:write(Values2),io:nl(),io:nl(),
+    if length(Values1)==length(Values2)->
+	    io:write(hellooooo),
+	    Values=lists:zipwith(fun(X,Y)->(X+Y) div 2 end, Values1,Values2),
+	    dets:insert(Dets,{{CoreID,OldZoom+1,TimeIn1},Values}),
+	    traverse(Dets,CoreID,OldZoom,Keys);
+       true -> ok
+    end;
 traverse(_Dets,_CoreID,_OldZoom,_Keys) ->
     ok.
 
@@ -240,6 +246,7 @@ traverse(_Dets,_CoreID,_OldZoom,_Keys) ->
 
 analyze(InName,OutName,GU,{FromCore,ToCore})->
     Longest=decode_all(OutName,InName,GU,{FromCore,ToCore}),
+io:write(Longest),
     MaxZoomLevel=erlang:trunc(math:log(Longest)/math:log(2))+1,
     {ok,Dets}=dets:open_file(OutName),
     generate_zoom_lvls(Dets,{FromCore,ToCore},MaxZoomLevel),
@@ -250,3 +257,7 @@ analyze(InName,OutName,GU,CoreN)->
    
 analyze(InName,OutName)->
     analyze(InName,OutName,8,{1,6}).
+
+
+analyze()->
+    analyze(trace_gabi,deleteme).
