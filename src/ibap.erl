@@ -55,7 +55,7 @@ get_duration(Duration1,Bytes2)->
     if Duration<?MAX_DUR->
 	    {Duration,Fo,Fm,Bytes2};
        Duration==?MAX_DUR ->
-	    {DurationRec,Bytes3} = get_till_not_max(Duration,Bytes2,?MAX_DUR),
+	    {DurationRec,Bytes3} = get_till_not_max(Duration,Bytes2,255),
 	    {DurationRec,Fo,Fm,Bytes3}
     end.
 
@@ -222,7 +222,6 @@ generate_zoom_lvls(Dets,{FromCore,ToCore},MaxZoomOut)->
 		      lists:map(fun(CoreID)->
 					Keys=dets:match(Dets,{{CoreID,OldZoom,'$3'},'_'}),
 					SKeys=lists:sort(Keys),
-					io:write(SKeys),io:nl(),
 					traverse(Dets,CoreID,OldZoom,SKeys)
 				end, lists:seq(FromCore,ToCore))
 	      end, lists:seq(0,MaxZoomOut)).
@@ -230,25 +229,32 @@ generate_zoom_lvls(Dets,{FromCore,ToCore},MaxZoomOut)->
 traverse(Dets,CoreID,OldZoom,[[TimeIn1],[TimeIn2]|Keys])->
     [{_,Values1}]=dets:lookup(Dets,{CoreID,OldZoom,TimeIn1}),
     [{_,Values2}]=dets:lookup(Dets,{CoreID,OldZoom,TimeIn2}),
-io:nl(),io:write('Val1: '),io:write(Values1),io:nl(),io:write('Val2: '),io:write(Values2),io:nl(),io:nl(),
-    if length(Values1)==length(Values2)->
-	    io:write(hellooooo),
-	    Values=lists:zipwith(fun(X,Y)->(X+Y) div 2 end, Values1,Values2),
-	    dets:insert(Dets,{{CoreID,OldZoom+1,TimeIn1},Values}),
-	    traverse(Dets,CoreID,OldZoom,Keys);
-       true -> ok
-    end;
+    Values=lists:append(zoom_out(Values1),zoom_out(Values2)),
+    dets:insert(Dets,{{CoreID,OldZoom+1,TimeIn1},Values}),
+    traverse(Dets,CoreID,OldZoom,Keys);
+traverse(Dets,CoreID,OldZoom,[[TimeIn1]])->
+    [{_,Values1}]=dets:lookup(Dets,{CoreID,OldZoom,TimeIn1}),
+    Values=zoom_out(Values1),
+    dets:insert(Dets,{{CoreID,OldZoom+1,TimeIn1},Values});
 traverse(_Dets,_CoreID,_OldZoom,_Keys) ->
     ok.
 
     
+zoom_out([H1,H2|T])->
+    [round((H1+H2)/2)|zoom_out(T)];
+zoom_out([H]) ->
+    [round(H/2)];
+zoom_out([]) ->
+    [].
+
+
     
 
 analyze(InName,OutName,GU,{FromCore,ToCore})->
     Longest=decode_all(OutName,InName,GU,{FromCore,ToCore}),
-io:write(Longest),
     MaxZoomLevel=erlang:trunc(math:log(Longest)/math:log(2))+1,
     {ok,Dets}=dets:open_file(OutName),
+    dets:insert(Dets,{init_state,MaxZoomLevel,ToCore-FromCore+1}),
     generate_zoom_lvls(Dets,{FromCore,ToCore},MaxZoomLevel),
     dets:insert(Dets,{cores,ToCore-FromCore+1}),
     dets:close(Dets);
@@ -260,4 +266,9 @@ analyze(InName,OutName)->
 
 
 analyze()->
-    analyze(trace_gabi,deleteme).
+    analyze(trace_gabi,analyzed_trace).
+
+
+display()->
+    {ok,D} = dets:open_file(analyzed_trace,[]),
+    dets:match_object(D,'_').

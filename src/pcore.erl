@@ -13,6 +13,8 @@
 % if end_tracing/0 is not called some of the trace might not be stored 
 % erlang_tracing/1 ensures that the trace related to PID has been delivered
 
+mant()->
+    pcore:start(42,42,42).
 test(M)->
     pcore:start(test,test,[M],[no_auto_stop]).
 
@@ -34,6 +36,7 @@ start(M,F,Args,GName,FName,CoreN,Flags)->
     			   timestamp,
     			   {tracer,PID}]),
     apply(M,F,Args),
+    tester:start(PID),
     case lists:member(no_auto_stop,Flags) of
 	true  -> ok;
 	false -> stop()
@@ -43,8 +46,8 @@ start(M,F,Args,GName,FName,CoreN,Flags)->
 stop()->
     stop(all).
 stop(PID)->
-    erlang:trace_delivered(PID),
-    erlang:trace(all,false,[]),
+   erlang:trace_delivered(PID),
+   erlang:trace(all,false,[]),
     master_tracer!exit.
 
 % we manually implement delayed write since it appears to be faster 

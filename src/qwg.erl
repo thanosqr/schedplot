@@ -40,7 +40,8 @@ init(graph,Panel,Frame)->
 		      wxEvtHandler:connect(Panel,X) 
 	      end, ?CONTROLS),
     wxFrame:show(Frame),
-    graph_loop(Panel,qdb:init_state(),qdb:init()).
+    Tab=qdb:init(),
+    graph_loop(Panel,qdb:init_state(Tab),Tab).
  %   spawn(?MODULE,graph_loop,[Panel]).
 
 
@@ -67,8 +68,10 @@ graph_loop(Panel,State,Tab)->
 	#wx{event=#wxKey{keyCode=?WXK_RIGHT}}->
 	    ChangeMode = move2right;
 
-	#wx{event=#wxMouse{type=left_up,x=X}}->
-	    ChangeMode = {place_cursor,X};
+%	#wx{event=#wxMouse{type=left_up,x=X}}->
+	#wx{event=#wxMouse{type=left_up}}->
+	    io:write(event),
+	    ChangeMode = {place_cursor,42};
 
 	#wx{event=#wxKey{keyCode=?WXK_NUMPAD_ADD,controlDown=true}}->
 	    ChangeMode = real_size;
