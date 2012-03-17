@@ -1,0 +1,5 @@
+ { [qraph, cds, plotter,
+    pcore, pabi, ibap, qtransf, qutils, famdict,
+    timer_wheel, tester],
+   [{outdir, "../ebin"}] }.
+
