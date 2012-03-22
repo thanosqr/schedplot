@@ -101,3 +101,31 @@ detgen()->
 	      end,lists:seq(1,5)),
     dets:close(T).
     
+wdemo()->
+    Wx=wx:new(),
+    Frame=wxFrame:new(Wx,-1,"",[{size,{1000,600}}]),
+
+    Ok = wxButton:new(Frame,?wxID_ANY,[{label,"OK"}]),
+    Panel2 = wxPanel:new(Frame,[{size,{400,42}}]),
+    wxPanel:hide(Panel2),
+    Panel = wxPanel:new(Frame,[{size,{400,42}}]),
+    timer:sleep(420),
+    wxFrame:show(Frame),
+    timer:sleep(420),
+    Paint=wxPaintDC:new(Panel),
+    plotter:dl(Paint,420,420,840),
+    wxPaintDC:destroy(Paint),
+    timer:sleep(420),
+    Paint2=wxPaintDC:new(Panel2),
+    plotter:dl(Paint2,420,420,840),
+    wxPaintDC:destroy(Paint2),
+    timer:sleep(2000),
+    wxPanel:hide(Panel),
+    
+    wxPanel:show(Panel2).
+%    wxPanel:hide(Panel),
+    %% Sizer=wxBoxSizer:new(?wxHORIZONTAL),
+    %% wxSizer:add(Sizer,Ok),
+    %% wxSizer:add(Sizer,Panel).
+
+    
