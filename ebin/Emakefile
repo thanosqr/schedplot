@@ -1,0 +1,5 @@
+ { ["../src/qraph", "../src/pds", "../src/plotter",
+    "../src/pcore", "../src/pabi", "../src/ibap", "../src/qtransf", "../src/qutils", "../src/famdict",
+    "../src/timer_wheel", "../src/tester"],
+   [] }.
+
