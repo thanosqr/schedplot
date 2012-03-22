@@ -2,7 +2,7 @@
 -compile(export_all).
 -include_lib("wx/include/wx.hrl").
 
-clear_canvas(Panel)->
+clear_canvas(Panl)->
     Paint = wxBufferedPaintDC:new(Panel),
     wxDC:clear(Paint),
     wxBufferedPaintDC:destroy(Paint).
@@ -29,7 +29,7 @@ drawLinePoints(Paint,List)->
 drawLines(_,[],_,_)->
     ok;
 drawLines(Paint,[Length|Lengths],X,Yo)->
-    dl(Paint,X,Yo,Length,42),
+    dl(Paint,X,Yo,Length),
     drawLines(Paint,Lengths,X+42,Yo).
 
 dl(Paint,X,Yo,Length)->
@@ -50,3 +50,4 @@ drawCoreLines(_,[],_)->ok;
 drawCoreLines(Paint,[CL|CLs],Y)->
     drawCoreLine(Paint,CL,Y),
     drawCoreLines(Paint,CLs,Y+42).
+
