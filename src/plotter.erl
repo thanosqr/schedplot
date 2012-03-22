@@ -2,7 +2,7 @@
 -compile(export_all).
 -include_lib("wx/include/wx.hrl").
 
-clear_canvas(Panl)->
+clear_canvas(Panel)->
     Paint = wxBufferedPaintDC:new(Panel),
     wxDC:clear(Paint),
     wxBufferedPaintDC:destroy(Paint).
@@ -16,11 +16,11 @@ clear_canvas(Panl)->
 % A horizontal line for Y=Yo
 % Lines of given length starting from Yo
 
-drawValues(Panel,Values)->
-    Paint = wxBufferedPaintDC:new(Panel),
- %   wxDC:clear(Paint),
-    drawCoreLines(Paint,Values),
-    wxBufferedPaintDC:destroy(Paint).
+%% drawValues(Panel,Values)->
+%%     Paint = wxBufferedPaintDC:new(Panel),
+%%  %   wxDC:clear(Paint),
+%%     drawCoreLine(Paint,Values),
+%%     wxBufferedPaintDC:destroy(Paint).
 
 drawLinePoints(Paint,List)->
     lists:map(fun({A,B})->wxDC:drawLine(Paint,A,B) end,List).

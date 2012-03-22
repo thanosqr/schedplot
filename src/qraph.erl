@@ -3,7 +3,7 @@
 -include_lib("wx/include/wx.hrl").
 -define(CONTROLS,[left_up,mousewheel,left_dclick,key_down]).
 -define(STEP,5).
--define(PANEL_SIZE,6).
+
 -define(DETS_PACK_SIZE,1000).
 
 
@@ -12,15 +12,23 @@
 -define(LEFT,#wx{event=#wxKey{keyCode=?WXK_LEFT}}).
 -define(RIGHT,#wx{event=#wxKey{keyCode=?WXK_RIGHT}}).
 
--record(panel,{Panel,
-	       Key}).
+-record(pds,{tab,
+	     current,
+	     in,
+	     out,
+	     first_key,
+	     max_cores,
+	     zoom,
+	     max_zoom,
+	     frame,
+	     offset}).
 
 loop(PDS)->
     receive
 	{update,NPDS}->
-	    loop(NPDS#pds{offset=PDS#pds.offset-?DETS_PACK_SIZE);
+	    loop(NPDS#pds{offset=PDS#pds.offset-?DETS_PACK_SIZE});
 	WxEvent->
-	    NPDS=change_state(WxEvent,State,Panels),
+	    NPDS=change_state(WxEvent,PDS),
 	    loop(NPDS)
     end.
 
@@ -35,7 +43,8 @@ change_state(How,PDS)->
 	    PDS
     end.
 
-
+demo()->
+    init(demo_trace).
 init()->
     init(analyzed_trace).
 init(Filename)->
@@ -49,15 +58,46 @@ init(Filename)->
 
     {ok,Tab} = dets:open_file(Filename,[{access,read}]),
     [{init_state,Max_Zoom,CoreN}]=dets:lookup(Tab,init_state),
-    Values=dets:match(Tab,{{'_',Max_Zoom-7,'_'},'$1'}),
-    wxFrame:show(Frame),
-timer:sleep(10),
-    plotter:drawValues(Panel,Values),
-    loop(Tab,PIDS,Panel).
+    Sizer=wxBoxSizer:new(?wxHORIZONTAL),
+%    Panel2=wx:panel(Frame),
+%    wxPanel:hide(Panel2),
+    Panel=wxPanel:new(Frame),
+    wxBoxSizer:add(Sizer,Panel),
+    wxWindow:setSizer(Frame,Sizer),
+wxFrame:show(Frame),    
+timer:sleep(1000),
+
+ %   PDS=pds:new(Tab,1,CoreN,Max_Zoom-2,Max_Zoom,Frame),
+
+    Paint=wxBufferedPaintDC:new(Panel),
+    plotter:dl(Paint,42,42,420),
+    wxBufferedPaintDC:destroy(Paint),
+   %% Paint2=wxBufferedPaintDC:new(Panel2),
+   %%  plotter:dl(Paint,5,50,200),
+   %%  wxBufferedPaintDC:destroy(Paint2),
+%    wxFrame:show(Frame),    
+
+    
+io:write(lala),
+    loop(aPDS).
 
 
 % new table format:
 % {{CoreID, Zoom, Key},Start,Values}
 
 
+cont(V)->
+    lists:map(fun(_)->
+			     V
+	      end, lists:seq(1,1000)).
+    
+detgen()->
+    {ok,T}=dets:open_file(demo_trace,[]),
+    dets:insert(T,{init_state,5,1}),
+    lists:map(fun(Y)->
+		      lists:map(fun(X)->
+					dets:insert(T,{{1,Y,X},42,cont(X)})
+				end,lists:seq(1,6))    
+	      end,lists:seq(1,5)),
+    dets:close(T).
     
