@@ -15,6 +15,7 @@
 	     data,
 	     size,
 	     timestart,
+	     key=1,
 	     datalength=0}).
 
 -define(MAX_OUT,1000).
@@ -171,8 +172,12 @@ insert(Out,Val)->
 
 save(Out)->
 %    io:write(Out#out.data),
-    dets:insert(Out#out.file,{{Out#out.coreID, Out#out.zoom, Out#out.timestart},Out#out.data}),
-    Out#out{data=[],timestart=Out#out.timestart+?MAX_OUT, size=0, datalength=Out#out.datalength+length(Out#out.data)}.
+    dets:insert(Out#out.file,{{Out#out.coreID, Out#out.zoom, Out#out.key},Out#out.timestart,Out#out.data}),
+    Out#out{data=[],
+	    timestart=Out#out.timestart+?MAX_OUT, 
+	    key=Out#out.key+1,
+	    size=0, 
+	    datalength=Out#out.datalength+length(Out#out.data)}.
 
 
 close_out(Out)->
@@ -220,22 +225,22 @@ decode_all(OutName,InName,GU,{FromCore,ToCore})->
 generate_zoom_lvls(Dets,{FromCore,ToCore},MaxZoomOut)->
     lists:map(fun(OldZoom)->
 		      lists:map(fun(CoreID)->
-					Keys=dets:match(Dets,{{CoreID,OldZoom,'$3'},'_'}),
+					Keys=dets:match(Dets,{{CoreID,OldZoom,'$3'},'_','_'}),
 					SKeys=lists:sort(Keys),
 					traverse(Dets,CoreID,OldZoom,SKeys)
 				end, lists:seq(FromCore,ToCore))
 	      end, lists:seq(0,MaxZoomOut)).
 
-traverse(Dets,CoreID,OldZoom,[[TimeIn1],[TimeIn2]|Keys])->
-    [{_,Values1}]=dets:lookup(Dets,{CoreID,OldZoom,TimeIn1}),
-    [{_,Values2}]=dets:lookup(Dets,{CoreID,OldZoom,TimeIn2}),
+traverse(Dets,CoreID,OldZoom,[[Key1],[Key2]|Keys])->
+    [{_,TimeIn1,Values1}]=dets:lookup(Dets,{CoreID,OldZoom,Key1}),
+    [{_,_,Values2}]=dets:lookup(Dets,{CoreID,OldZoom,Key2}),
     Values=lists:append(zoom_out(Values1),zoom_out(Values2)),
-    dets:insert(Dets,{{CoreID,OldZoom+1,TimeIn1},Values}),
+    dets:insert(Dets,{{CoreID,OldZoom+1,Key1},TimeIn1,Values}),
     traverse(Dets,CoreID,OldZoom,Keys);
-traverse(Dets,CoreID,OldZoom,[[TimeIn1]])->
-    [{_,Values1}]=dets:lookup(Dets,{CoreID,OldZoom,TimeIn1}),
+traverse(Dets,CoreID,OldZoom,[[Key1]])->
+    [{_,TimeIn,Values1}]=dets:lookup(Dets,{CoreID,OldZoom,Key1}),
     Values=zoom_out(Values1),
-    dets:insert(Dets,{{CoreID,OldZoom+1,TimeIn1},Values});
+    dets:insert(Dets,{{CoreID,OldZoom+1,Key1},TimeIn,Values});
 traverse(_Dets,_CoreID,_OldZoom,_Keys) ->
     ok.
 

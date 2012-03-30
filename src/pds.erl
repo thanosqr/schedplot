@@ -18,21 +18,23 @@
 	     zoom,
 	     max_zoom,
 	     frame,
+	     panel,
 	     offset}).
 
 panelCreate(Zoom,KeyStart,Table,MaxCore,Frame)->
-    Panel=wxPanel:new(Frame),
-    wxPanel:hide(Panel),
+    Panel=wxPanel:new(Frame,[{size,{1000,600}}]),
     Paint = wxBufferedPaintDC:new(Panel),
-    lists:map(fun(CoreID)->
+    wxDC:clear(Paint),
+    Current=lists:map(fun(CoreID)->
 		      case getValues(CoreID,Zoom,KeyStart,Table) of
 			  []->io:write(uh),ok;
 			  Values->
-			      plotter:drawCoreLine(Paint,[Values],CoreID*42)
+			      plotter:drawCoreLine(Paint,[Values],CoreID*42),
+			      Values
 		      end
 	      end, lists:seq(1,MaxCore)),
     wxBufferedPaintDC:destroy(Paint),
-    Panel.
+    {Panel,Current}.
 
 
 getValues(CoreID,Zoom,KeyStart,Table)->
@@ -40,15 +42,18 @@ getValues(CoreID,Zoom,KeyStart,Table)->
 		     dets:match(Table,{{CoreID,Zoom,Key},'_','$1'})	      
 		   end, lists:seq(KeyStart,KeyStart+?PANEL_SIZE-1))).
 
+fill_zoom_buffer(Max_Cores,FirstKey,Table,FromZoom,ToZoom)->
+    lists:map(fun(ZoomP)->
+			   lists:map(fun(CoreID)->
+					     getValues(CoreID,ZoomP,FirstKey,Table)
+				     end,lists:seq(1,Max_Cores))
+		   end,lists:seq(FromZoom,ToZoom)).
+
 new(Table,FirstKey,Max_Cores,Zoom,Max_Zoom,Frame)->
-    Current=panelCreate(Zoom,FirstKey,Table,Max_Cores,Frame),
-    io:write(wxPanel:show(Current)),
-    In = lists:map(fun(ZoomP)->
-			   panelCreate(ZoomP,FirstKey,Table,Max_Cores,Frame)
-		   end,lists:seq(Zoom-?ZOOM_BUFFER,Zoom-1)),
-    Out = lists:map(fun(ZoomP)->
-			   panelCreate(ZoomP,FirstKey,Table,Max_Cores,Frame)
-		    end,lists:seq(Zoom+1,Zoom+?ZOOM_BUFFER)),
+    {Panel,Current}=panelCreate(Zoom,FirstKey,Table,Max_Cores,Frame),
+io:write(Current),
+    In = fill_zoom_buffer(Max_Cores,FirstKey,Table,Zoom-?ZOOM_BUFFER,Zoom-1),
+    Out = fill_zoom_buffer(Max_Cores,FirstKey,Table,Zoom+1,Zoom+?ZOOM_BUFFER),
     #pds{tab=Table,
 	 current=Current,
 	 in=In,
@@ -58,14 +63,15 @@ new(Table,FirstKey,Max_Cores,Zoom,Max_Zoom,Frame)->
 	 zoom=Zoom,
 	 max_zoom=Max_Zoom,
 	 frame=Frame,
-	 offset=0
+	 offset=0,
+	 panel=Panel
 	}.
     
 move(PDS,Offset)->
     spawn(?MODULE,check_offset,[Offset,PDS,wx:get_env(),self()]),               
 %we assume that we will update before we reach the hard limit
 %however, maybe a strick check should be introduced
-    wxPanel:move(PDS#pds.current,Offset,0),
+    wxPanel:move(PDS#pds.panel,Offset,0),
     PDS#pds{offset=PDS#pds.offset+Offset}.
 
 check_offset(Offset,PDS,Env,PID)->
