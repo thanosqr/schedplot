@@ -1,7 +1,7 @@
 -module(qraph).
 -compile(export_all).
 -include_lib("wx/include/wx.hrl").
--define(CONTROLS,[left_up,mousewheel,left_dclick,key_down]).
+
 -define(STEP,5).
 
 -define(DETS_PACK_SIZE,1000).
@@ -28,6 +28,7 @@ loop(PDS)->
 	{update,NPDS}->
 	    loop(NPDS#pds{offset=PDS#pds.offset-?DETS_PACK_SIZE});
 	WxEvent->
+io:write(o),
 	    NPDS=change_state(WxEvent,PDS),
 	    loop(NPDS)
     end.
@@ -36,6 +37,7 @@ loop(PDS)->
 change_state(How,PDS)->
     case How of
 	?LEFT->
+	    io:write(l),
 	    pds:move(PDS,-?STEP);
 	?RIGHT->
 	    pds:move(PDS,?STEP);
@@ -50,15 +52,13 @@ init()->
 init(Filename)->
     Wx=wx:new(),
     Frame=wxFrame:new(Wx,-1,"",[{size,{1000,600}}]),    
-    lists:map(fun(X)->
-		      wxEvtHandler:connect(Frame,X) %was panel
-	      end, ?CONTROLS),
+
 
     {ok,Tab} = dets:open_file(Filename,[{access,read}]),
     [{init_state,Max_Zoom,CoreN}]=dets:lookup(Tab,init_state),
     wxFrame:show(Frame),  
 timer:sleep(420),
-    PDS=pds:new(Tab,1,CoreN,3,Max_Zoom,Frame),
+    PDS=pds:new(Tab,1,CoreN,Max_Zoom,Max_Zoom,Frame),
 
 io:write(lala),
     loop(PDS).
@@ -70,7 +70,7 @@ io:write(lala),
 
 cont(V)->
     lists:map(fun(_)->
-			     V
+			V     
 	      end, lists:seq(1,1000)).
     
 detgen()->
@@ -97,4 +97,21 @@ wdemo()->
     wxPaintDC:destroy(Paint),
 timer:sleep(2000),
     wxPanel:move(Panel,10,10).
+    
+test()->
+    Wx=wx:new(),
+    Frame=wxFrame:new(Wx,-1,"",[{size,{1000,600}}]),
+    Panel=wxPanel:new(Frame,[{size,{1000,600}}]),
+    wxFrame:show(Frame),
+    timer:sleep(420),
+    Paint = wxClientDC:new(Panel),
+wxDC:clear(Paint),
+    plotter:drawCoreLine(Paint,[[1,1,1,1,1,1,1,1,1,1,1]],42),
+    wxClientDC:destroy(Paint),
+timer:sleep(2442),
+    wxPanel:move(Panel,100,0),
+    Paint2 = wxClientDC:new(Panel),
+    plotter:drawCoreLine(Paint2,[[11,11,11,11,11,11,11]],42),
+    wxClientDC:destroy(Paint2).
+
     

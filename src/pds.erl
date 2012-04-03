@@ -8,6 +8,7 @@
 -define(PANEL_SIZE,6).
 -define(MAX_OFFSET,1000).
 -define(MIN_OFFSET,-1000).
+-define(CONTROLS,[left_up,mousewheel,left_dclick,key_down]).
 
 -record(pds,{tab,
 	     current,
@@ -23,6 +24,10 @@
 
 panelCreate(Zoom,KeyStart,Table,MaxCore,Frame)->
     Panel=wxPanel:new(Frame,[{size,{1000,600}}]),
+    lists:map(fun(X)->
+		      wxEvtHandler:connect(Panel,X) 
+	      end, ?CONTROLS),
+
     Paint = wxBufferedPaintDC:new(Panel),
     wxDC:clear(Paint),
     Current=lists:map(fun(CoreID)->
@@ -30,6 +35,7 @@ panelCreate(Zoom,KeyStart,Table,MaxCore,Frame)->
 			  []->io:write(uh),ok;
 			  Values->
 			      plotter:drawCoreLine(Paint,[Values],CoreID*42),
+			      io:write({Values}),
 			      Values
 		      end
 	      end, lists:seq(1,MaxCore)),
@@ -51,7 +57,6 @@ fill_zoom_buffer(Max_Cores,FirstKey,Table,FromZoom,ToZoom)->
 
 new(Table,FirstKey,Max_Cores,Zoom,Max_Zoom,Frame)->
     {Panel,Current}=panelCreate(Zoom,FirstKey,Table,Max_Cores,Frame),
-io:write(Current),
     In = fill_zoom_buffer(Max_Cores,FirstKey,Table,Zoom-?ZOOM_BUFFER,Zoom-1),
     Out = fill_zoom_buffer(Max_Cores,FirstKey,Table,Zoom+1,Zoom+?ZOOM_BUFFER),
     #pds{tab=Table,
@@ -71,7 +76,7 @@ move(PDS,Offset)->
     spawn(?MODULE,check_offset,[Offset,PDS,wx:get_env(),self()]),               
 %we assume that we will update before we reach the hard limit
 %however, maybe a strick check should be introduced
-    wxPanel:move(PDS#pds.panel,Offset,0),
+    wxPanel:move(PDS#pds.panel,PDS#pds.offset+Offset,0),
     PDS#pds{offset=PDS#pds.offset+Offset}.
 
 check_offset(Offset,PDS,Env,PID)->

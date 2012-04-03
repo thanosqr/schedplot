@@ -1,4 +1,4 @@
- { ["../src/qraph", "../src/pds", "../src/plotter",
+ { ["../src/buffdets", "../src/uds", "../src/plotter","../src/qraph",
     "../src/pcore", "../src/pabi", "../src/ibap", "../src/qtransf", "../src/qutils", "../src/famdict",
     "../src/timer_wheel", "../src/tester"],
    [] }.

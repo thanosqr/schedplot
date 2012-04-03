@@ -30,7 +30,7 @@ drawLines(_,[],_,_)->
     ok;
 drawLines(Paint,[Length|Lengths],X,Yo)->
     dl(Paint,X,Yo,Length),
-    drawLines(Paint,Lengths,X+42,Yo).
+    drawLines(Paint,Lengths,X+1,Yo).
 
 dl(Paint,X,Yo,Length)->
     wxDC:drawLine(Paint,{X,Yo},{X,Yo-Length}).
@@ -40,9 +40,9 @@ dl(Paint,X,Yo,Length,Width)->
     wxDC:drawLine(Paint,{X,Yo},{X,Yo-Length}),
     dl(Paint,X+1,Yo,Length,Width-1).
 
-drawCoreLine(Paint,[Lengths],Yo)->
+drawCoreLine(Paint,Lengths,Yo)->
     wxDC:drawLine(Paint,{0,Yo},{1000,Yo}),
-    drawLines(Paint,Lengths,0,Yo).
+    drawLines(Paint,Lengths,-10,Yo).
 
 drawCoreLines(Paint,CLs)->
     drawCoreLines(Paint,CLs,42).
