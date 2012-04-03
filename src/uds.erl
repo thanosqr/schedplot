@@ -68,6 +68,11 @@ change_state(How,Panel)->
 	    Panel#panel{xpos=Panel#panel.xpos-?STEP};
 	?RIGHT->
 	    Panel#panel{xpos=Panel#panel.xpos+?STEP};
+	?ZOOM_IN->
+	    io:write(in),
+	    Panel#panel{zoomlvl=Panel#panel.zoomlvl+1};
+	?ZOOM_OUT->
+	    Panel#panel{zoomlvl=Panel#panel.zoomlvl-1};
 	_->
 	    Panel
     end.

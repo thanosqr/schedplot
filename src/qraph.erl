@@ -78,7 +78,7 @@ detgen()->
     dets:insert(T,{init_state,5,1}),
     lists:map(fun(Y)->
 		      lists:map(fun(X)->
-					dets:insert(T,{{1,Y,X},42,cont(X)})
+					dets:insert(T,{{1,Y,X},42,cont(X+Y-1)})
 				end,lists:seq(1,6))    
 	      end,lists:seq(1,5)),
     dets:close(T).
