@@ -36,7 +36,7 @@ start(M,F,Args,GName,FName,CoreN,Flags)->
     			   timestamp,
     			   {tracer,PID}]),
     apply(M,F,Args),
-    tester:start(PID),
+%    tester:start(PID),
     case lists:member(no_auto_stop,Flags) of
 	true  -> ok;
 	false -> stop()

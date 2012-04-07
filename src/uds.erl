@@ -54,6 +54,7 @@ io:write({Zs,Xs}),
 
 draw(Panel, Datapack)->
     Values = buffdets:getData(Panel#panel.xpos,Panel#panel.width,Panel#panel.zoomlvl,Datapack),
+    io:write(length(lists:nth(1,Values))),io:nl(),
     Paint = wxBufferedPaintDC:new(Panel#panel.panel),
     wxDC:clear(Paint),
     plotter:drawCoreLines(Paint,Values),
@@ -65,7 +66,6 @@ loop(Panel,Datapack)->
 %	{update,NPDS}->
 %	    loop(NPDS#pds{offset=PDS#pds.offset-?DETS_PACK_SIZE});
 	WxEvent->
-		io:write(o),
 		NPanel=change_state(WxEvent,Panel),
 		draw(NPanel,Datapack),
 		loop(NPanel,Datapack)
@@ -91,6 +91,8 @@ change_state(How,Panel)->
 	    if Panel#panel.zoomin_data>0 ->
 		    Panel#panel{zoomlvl=Panel#panel.zoomlvl+1,
 				xpos=2*Panel#panel.xpos-1,
+				left_data=2*Panel#panel.left_data,
+				right_data=2*Panel#panel.right_data,
 				zoomin_data=Panel#panel.zoomin_data-1,
 				zoomout_data=Panel#panel.zoomout_data+1};
 	       true -> Panel
@@ -99,6 +101,8 @@ change_state(How,Panel)->
 	    if Panel#panel.zoomout_data>0 ->
 		    Panel#panel{zoomlvl=Panel#panel.zoomlvl-1,
 				xpos=(Panel#panel.xpos+1) div 2,
+				left_data=Panel#panel.left_data div 2,
+				right_data=Panel#panel.right_data div 2,
 				zoomin_data=Panel#panel.zoomin_data+1,
 				zoomout_data=Panel#panel.zoomout_data-1};
 	       true -> Panel

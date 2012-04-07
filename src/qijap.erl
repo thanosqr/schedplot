@@ -17,6 +17,9 @@ analyze(In, Out)->
 analyze()->
 		analyze(?DEFAULT_GNAME,?DEFAULT_TNAME).
 
+analyze(CoreN)->
+    ibap:analyze(?DEFAULT_GNAME,?DEFAULT_TNAME,8,CoreN).
+
 start(M,F,Args)->
 		pcore:start(M,F,Args).
 
