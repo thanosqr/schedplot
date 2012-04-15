@@ -267,7 +267,11 @@ analyze(InName,OutName,GU,CoreN)->
     analyze(InName,OutName,GU,{1,CoreN}).
    
 analyze(InName,OutName)->
-    analyze(InName,OutName,8,{1,6}).
+		HName=string:concat(atom_to_list(InName),atom_to_list(head)),
+		{ok,F}=file:open(HName,[read]),
+		{ok,CoreN} = io:read(F,''),
+		file:close(F),
+    analyze(InName,OutName,8,CoreN).
 
 
 analyze()->

@@ -23,6 +23,11 @@ analyze(CoreN)->
 start(M,F,Args)->
 		pcore:start(M,F,Args).
 
+start({M,F,Args})->
+		start({M,F,Args},[]).
+start({M,F,Args},Flags)->
+		start(M,F,Args,erlang:system_info(schedulers),Flags).
+
 start(M,F,Args,GName,FName,CoreN,Flags)->
 		pcore:start(M,F,Args,GName,FName,CoreN,Flags).
 
