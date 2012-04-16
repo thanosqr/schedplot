@@ -28,11 +28,11 @@ start(M,F,Args,Flags)->
     start(M,F,Args,?DEFAULT_GNAME,?DEFAULT_FNAME,?DEFAULT_COREN,Flags).
 
 start(M,F,Args,GName,FName,CoreN,Flags)->
-		HName=string:concat(atom_to_list(InName),atom_to_list(head)),
-		{ok,F}=file:open(HName,[write]),
-		io:write(F,CoreN),
-		io:put_chars(F,"."),
-		file:close(F),
+		HName=string:concat(atom_to_list(GName),atom_to_list('_header')),
+		{ok,FP}=file:open(HName,[write]),
+		io:write(FP,CoreN),
+		io:put_chars(FP,"."),
+		file:close(FP),
     PIDs = lists:map(fun(X)-> spawn(pcore,start_tracer,[GName,FName,X,Flags,erlang:now()]) end, lists:seq(1,CoreN)),
     PID = spawn(?MODULE,master_tracer,[array:fix(array:from_list(PIDs))]),
     register(master_tracer,PID),

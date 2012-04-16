@@ -36,3 +36,6 @@ start(M,F,Args,CoreN,Flags)->
 
 stop()->
 		pcore:stop().
+
+start()->
+		start({timer_wheel,wheel,[500]}).
