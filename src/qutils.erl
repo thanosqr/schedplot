@@ -27,3 +27,12 @@ take_from_tail(N,L)->
 	    {lists:reverse(T),M}
     end.
 		
+% lists:sublist(L,P,D) will fail if P > lenght(L) + 1
+% instead, we want it to return an empty list
+
+sublist(List,Index,Len)->
+		if length(List) > Index ->
+						lists:sublist(List,Index,Len);
+			 true ->
+						[]
+		end.

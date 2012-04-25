@@ -38,17 +38,17 @@ getData(From,Duration,ZoomLvl,Datapack)->
     io:write({ArrayID,ArrayIndex}),
     if ArrayIndex+Duration =< ?DETS_PACK_SIZE ->
 	    lists:map(fun(CoreData)->
-			      lists:sublist(lists:nth(ArrayID,CoreData),ArrayIndex,Duration)
+			      qutils:sublist(lists:nth(ArrayID,CoreData),ArrayIndex,Duration)
 		      end,lists:nth(ZoomLvl,Data));
         ArrayIndex+Duration > ?DETS_PACK_SIZE ->
 	    lists:map(fun(CoreData)->
 			      io:write(lists:nth(ArrayID+1,CoreData)),
-				io:write(lists:sublist(lists:nth(ArrayID+1,CoreData),1,Duration-?DETS_PACK_SIZE+ArrayIndex))
+				io:write(qutils:sublist(lists:nth(ArrayID+1,CoreData),1,Duration-?DETS_PACK_SIZE+ArrayIndex))
 		      end,lists:nth(ZoomLvl,Data)),
 	    lists:map(fun(CoreData)->
 			      lists:append(
-				lists:sublist(lists:nth(ArrayID,CoreData),ArrayIndex,?DETS_PACK_SIZE-ArrayIndex),
-				lists:sublist(lists:nth(ArrayID+1,CoreData),1,Duration-?DETS_PACK_SIZE+ArrayIndex))
+				qutils:sublist(lists:nth(ArrayID,CoreData),ArrayIndex,?DETS_PACK_SIZE-ArrayIndex),
+				qutils:sublist(lists:nth(ArrayID+1,CoreData),1,Duration-?DETS_PACK_SIZE+ArrayIndex))
 		      end,lists:nth(ZoomLvl,Data))
     end.
 
