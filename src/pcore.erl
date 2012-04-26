@@ -66,43 +66,49 @@ start_tracer(PName,FName,N,_Flags,Now)->
     Pabi=pabi:open(P,F,Now),
     ?MODULE:tracer(Pabi,null).
 
-    
+
 tracer(Pabi,Prev)->
     receive
-	exit->
-	    pabi:close(Pabi),io:write(ok);
-	{PID,IO,MFA,Time}->
-	    P2 = {PID,IO,MFA,Time},
-	    case IO of
-		in -> 
-		    NPrev = P2,
-		    NPabi = Pabi;
-		out ->
-		    case Prev of
-			null ->
-			    NPrev = Prev,
-			    NPabi = Pabi;
-			_ ->
-			    NPrev=null,
-			    NPabi=pabi:add(Prev,P2,Pabi)
-		    end
-	    end,
-	    tracer(NPabi,NPrev)
+				exit->
+						pabi:close(Pabi),io:write(ok);
+				{PID,IO,MFA,Time}->
+						P2 = {PID,IO,MFA,Time},
+						case IO of
+								in -> 
+										NPrev = P2,
+										NPabi = Pabi;
+								out ->
+										case Prev of
+												null ->
+														NPrev = Prev,
+														NPabi = Pabi;
+												_ ->
+														NPrev=null,
+														NPabi=pabi:add(Prev,P2,Pabi)
+										end
+						end,
+						tracer(NPabi,NPrev);
+				PID ->
+						pabi:close(Pabi),
+						PID!ok
     end.
+
 
 master_tracer(PIDs)->
     receive
-	exit->
-	    lists:map(fun(P)->P!exit end,array:to_list(PIDs));
-	{trace_ts,PID,IO,SID,MFA,Time} ->
-	    case MFA of
-	    	{io,wait_io_mon_reply,2} ->
-	    	    % io:wait_io_mon_reply/2 appears to only enter the schedulers (and never leave)
-	    	    % possibly a problem with trace&io; temporarily we ignore those messages
-	    	    %io:write('-----------iomon error'),io:nl(),
-		    master_tracer(PIDs);
-	    	_ ->
-	    	    array:get(SID-1,PIDs)!{PID,IO,MFA,Time},  %0-indexed arrays
-		    master_tracer(PIDs)
+				exit->
+						lists:map(fun(P)->P!self() end,array:to_list(PIDs)),
+						lists:map(fun(_)->receive ok -> ok end end, array:to_list(PIDs)),
+						io:write(ok);
+				{trace_ts,PID,IO,SID,MFA,Time} ->
+						case MFA of
+								{io,wait_io_mon_reply,2} ->
+										% io:wait_io_mon_reply/2 appears to only enter the schedulers (and never leave)
+										% possibly a problem with trace&io; temporarily we ignore those messages
+										%io:write('-----------iomon error'),io:nl(),
+										master_tracer(PIDs);
+								_ ->
+										array:get(SID-1,PIDs)!{PID,IO,MFA,Time},  %0-indexed arrays
+										master_tracer(PIDs)
 	    end
     end.
