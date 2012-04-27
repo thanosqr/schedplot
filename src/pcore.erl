@@ -1,8 +1,8 @@
 -module(pcore).
 -compile(export_all).
--define(DEFAULT_FNAME,trace_famdict).
+-include("hijap.hrl").
+
 -define(DEFAULT_FLAGS,[]).
--define(DEFAULT_GNAME,trace_gabi).
 -define(DEFAULT_COREN,7).
 
 %arrays are zero indexed. either fix the indexing or number of cores = real number of cores +1

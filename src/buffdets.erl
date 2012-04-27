@@ -1,6 +1,7 @@
 -module(buffdets).
 -compile(export_all).
--define(DETS_PACK_SIZE,1000).
+-include("hijap.hrl").
+
 -define(DEF_BUFFER_X,60).
 -define(DEF_BUFFER_Z,25).
 

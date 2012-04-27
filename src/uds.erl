@@ -1,12 +1,11 @@
 -module(uds).
 -compile(export_all).
 -include_lib("wx/include/wx.hrl").
+-include("hijap.hrl").
 
--define(CORE_LIMIT,1000).
 -define(HEIGHT_INT,42). % graph height + space between cores in px
 -define(ZOOM_BUFFER,2).
 -define(UNIT_WIDTH,42).
--define(DETS_PACK_SIZE,1000).
 -define(PANEL_SIZE,6).
 -define(MAX_OFFSET,1000).
 -define(MIN_OFFSET,-1000).

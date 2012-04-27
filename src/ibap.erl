@@ -1,5 +1,7 @@
 -module(ibap).
 -compile(export_all).
+-include("hijap.hrl").
+
 -record(bytes,{file,
 	       data,
 	       left}).
@@ -18,10 +20,9 @@
 	     key=1,
 	     datalength=0}).
 
--define(MAX_OUT,1000).
+-define(MAX_OUT,?DETS_PACK_SIZE).
 -define(READ_N,100000).
--define(MAX_DUR,63).
--define(MAX_TIME,255).
+
 	       
 get_packet(Bytes)->
     case get_byte(Bytes) of

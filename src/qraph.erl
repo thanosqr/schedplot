@@ -1,11 +1,9 @@
 -module(qraph).
 -compile(export_all).
+-include("hijap.hrl").
 -include_lib("wx/include/wx.hrl").
 
 -define(STEP,5).
-
--define(DETS_PACK_SIZE,1000).
-
 
 -define(ZOOM_IN,#wx{event=#wxKey{keyCode=?WXK_NUMPAD_ADD}}).
 -define(ZOOM_OUT,#wx{event=#wxKey{keyCode=?WXK_NUMPAD_SUBTRACT}}).

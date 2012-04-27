@@ -10,10 +10,9 @@
 
 -module(pabi).
 -compile(export_all).
+-include("hijap.hrl").
 %-exports([open/1,store/2,close/1,add/4]).
 -define(MAX_SIZE,inf).
--define(MAX_TIME,255).
--define(MAX_DUR, 63).
 -record(pabi,{file,
 	      famdict,
 	      data,
