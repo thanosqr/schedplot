@@ -2,50 +2,33 @@
 -compile(export_all).
 -include("hijap.hrl").
 
--define(DEF_BUFFER_X,60).
--define(DEF_BUFFER_Z,25).
+-define(DEF_BUFFER_X,5).
+-define(DEF_BUFFER_Z,5).
 
--record(buffdets, {data,
-		   tab}).
+
 %  [ zoom levels [cores [ data [values]]]]] 
 
-open(Filename)->
-    open(Filename,?DEF_BUFFER_X,?DEF_BUFFER_Z).
+open(Filename,Panel,Frame)->
+    open(Filename,?DEF_BUFFER_X,?DEF_BUFFER_Z,Panel,Frame).
 
-open(Filename,BufferXsize,BufferZsize)->
+open(Filename,BufferXsize,BufferZsize,Panel,Frame)->
     {ok,Tab} = dets:open_file(Filename,[{access,read}]),
     [{init_state,Max_Zoom,CoreN}]=dets:lookup(Tab,init_state),
     Zoom=Max_Zoom-5,
-    [H|T]=lists:map(fun(Z)->
-			    getZoomLevel(Z,CoreN,Tab,BufferXsize,1)
-		    end,lists:seq(Zoom,Zoom-BufferZsize,-1)),
-    {length(H),length(T)+1,#buffdets{data=[H|T],
-				     tab=Tab}}.
+	create_buffer(Tab,BufferXsize,BufferZsize,CoreN,Panel,Frame,Zoom).
 
-getZoomLevel(Z,CoreN,Tab,BufferXsize,Xpos)->
-      lists:map(fun(CoreID)->
-			lists:map(fun(Key)->
-					  case dets:match(Tab,{{CoreID,Z,Key},'_','$1'}) of
-					      [[Values]] -> Values;
-					      [] -> []
-					  end
-				  end, lists:seq(Xpos,Xpos+BufferXsize*1000,1000))
-		end,lists:seq(1,CoreN)).
-
-getData(From,Duration,ZoomLvl,Datapack)->
+getData(Datapack)->
+	{ZoomLvl,From} = Datapack#buffdets.pos,
+	Duration = Datapack#buffdets.width,
     Data = Datapack#buffdets.data,
-    ArrayID = (From div ?DETS_PACK_SIZE)+1,          % 1-indexed
-    ArrayIndex = (From rem ?DETS_PACK_SIZE)+1,
-    io:write({ArrayID,ArrayIndex}),
+    ArrayID = (From div (?DETS_PACK_SIZE+1)),          % 1-indexed
+    ArrayIndex = (From rem (?DETS_PACK_SIZE+1)),
     if ArrayIndex+Duration =< ?DETS_PACK_SIZE ->
 	    lists:map(fun(CoreData)->
-			      qutils:sublist(lists:nth(ArrayID,CoreData),ArrayIndex,Duration)
+						  DL=lists:nth(ArrayID,CoreData),
+						  qutils:sublist(DL,ArrayIndex,Duration)
 		      end,lists:nth(ZoomLvl,Data));
         ArrayIndex+Duration > ?DETS_PACK_SIZE ->
-	    lists:map(fun(CoreData)->
-			      io:write(lists:nth(ArrayID+1,CoreData)),
-				io:write(qutils:sublist(lists:nth(ArrayID+1,CoreData),1,Duration-?DETS_PACK_SIZE+ArrayIndex))
-		      end,lists:nth(ZoomLvl,Data)),
 	    lists:map(fun(CoreData)->
 			      lists:append(
 				qutils:sublist(lists:nth(ArrayID,CoreData),ArrayIndex,?DETS_PACK_SIZE-ArrayIndex),
@@ -54,3 +37,105 @@ getData(From,Duration,ZoomLvl,Datapack)->
     end.
 
 
+
+%% ---All Values--------------------------------------------------------
+%% |
+%% |                            -----Second Buffered Area (b2)-------
+%% |                            |                                   |
+%% |         ---Buffered Area---|-----(b1)-----------------         |
+%% |         |                  |                         |         |
+%% |         |   ----No need to update buffered area----  |         |
+%% |         |   |              |         (nu)         |  |         |
+%% |         |   |              |     *                |  |         |
+%% |         |   ---------------|-----------------------  |         |
+%% |         |          *       |       *                 |         |
+%% |         -------------------|--------------------------         |
+%% |                            |                               *   |
+%% |          ?                 -------------------------------------
+%% |
+%% ----------------------------------------------------------------------
+
+read(Datapack)->
+	{getData(Datapack),
+	 case category(Datapack) of
+		 nu ->
+			 Datapack;
+		 Adj ->
+			 spawn(?MODULE,update,[self(),Adj,Datapack]),
+			 Datapack#buffdets{mode=update}
+	 end}.
+
+update(PID,Adj,Old)->
+	Buffer=refresh_buffer(Adj,Old),
+	PID!{new_buffer,Buffer}.	
+
+
+
+
+create_buffer(Tab,BufferXsize,BufferZsize,CoreN,Panel,Frame,Zoom)->
+	Xs=10000,
+	Zs = 42,
+	refresh_buffer({0,0},
+				   #buffdets{tab=Tab,
+							 offset={Zoom-(BufferZsize div 2),
+									 -(BufferXsize div 2)*?DETS_PACK_SIZE+1},
+							 mode=ready,
+							 static={BufferXsize,BufferZsize,CoreN},
+							 width=1000,
+							 panel=Panel,
+							 frame=Frame,
+							 left_data=Xs,
+							 right_data=Xs,
+							 zoomin_data=Zs,
+							 zoomout_data=0,
+							 pos={round(BufferZsize/2),
+								  round(BufferXsize/2)*?DETS_PACK_SIZE}
+							}).	
+
+refresh_buffer({Zadj,Xadj},Old)->
+	{BufferXsize,BufferZsize,CoreN} = Old#buffdets.static,
+	{Zoffset,Xoffset} = Old#buffdets.offset,
+	{Z,X} = Old#buffdets.pos,
+	ZoomStart = Zoffset+Zadj,
+	ZoomEnd = ZoomStart+BufferZsize,
+	XStart = Xoffset+Xadj,
+	XEnd = XStart+BufferXsize*?DETS_PACK_SIZE,
+	Data = get_from_dets(ZoomStart,ZoomEnd,XStart,XEnd,
+						 CoreN,Old#buffdets.tab),
+	Old#buffdets{data=Data,
+				 lz=2,
+				 uz=BufferZsize-1,
+				 lx=1+?DETS_PACK_SIZE,
+				 ux=(BufferXsize-1)*?DETS_PACK_SIZE,
+				 offset={Zoffset+Zadj,Xoffset+Xadj},
+				 pos={Z-Zadj,X-Xadj}
+				}.
+
+get_from_dets(ZoomStart,ZoomEnd,XStart,XEnd,CoreN,Tab)->
+		lists:map(fun(Zoom)->
+		   lists:map(fun(CoreID)->
+			 lists:map(fun(X)->
+				case dets:match(Tab,{{CoreID,Zoom,X},'_','$1'}) of
+					[[Values]] ->Values;
+					[] ->io:write({CoreID,Zoom,X}),[]
+				end
+			  end, lists:seq(XStart,XEnd,?DETS_PACK_SIZE))
+			end,lists:seq(1,CoreN))
+		  end,lists:seq(ZoomStart,ZoomEnd)).
+			  
+
+	
+category(Datapack)->
+	{ZoomLvl,Xpos} = Datapack#buffdets.pos,
+	Width = Datapack#buffdets.width,
+	if ZoomLvl>Datapack#buffdets.uz->
+			{1,0};
+	   ZoomLvl<Datapack#buffdets.lz ->
+			{-1,0};
+	   Xpos<Datapack#buffdets.lx ->
+			{0,-?DETS_PACK_SIZE};
+	   Xpos+Width>Datapack#buffdets.ux ->
+			{0,?DETS_PACK_SIZE};
+	   true ->
+			nu
+	end.

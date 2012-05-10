@@ -42,7 +42,7 @@ dl(Paint,X,Yo,Length,Width)->
 
 drawCoreLine(Paint,Lengths,Yo)->
     wxDC:drawLine(Paint,{0,Yo},{1000,Yo}),
-    drawLines(Paint,Lengths,-10,Yo).
+    drawLines(Paint,Lengths,0,Yo).
 
 drawCoreLines(Paint,CLs)->
     drawCoreLines(Paint,CLs,42).

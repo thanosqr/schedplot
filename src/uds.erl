@@ -22,16 +22,6 @@
 -define(QUIT,#wx{id=?EXIT,event=#wxCommand{type=command_menu_selected}}).
 
 
--record(panel,{width=1000,
-			   panel,
-			   frame,
-			   xpos=1,
-			   zoomlvl=1,
-			   left_data=0,
-			   right_data,
-			   zoomin_data,
-			   zoomout_data=0}).
-
 												%when using buffdets zoom level refers to the index of the buffered zoom levels; ie if we buffer 5 zoom levels the possible values are 1..5 which can refer to n..n+5 actual IDs.
 
 in()->
@@ -41,8 +31,6 @@ init()->
     init(demo_trace).
 
 init(Filename)->
-    {Zs,Xs,Datapack}=buffdets:open(Filename),
-	io:write({Zs,Xs}),
     Wx=wx:new(),
     Frame=wxFrame:new(Wx,?ANY,"",[{size,{1000,600}}]),  
 	MenuBar = wxMenuBar:new(),
@@ -51,79 +39,86 @@ init(Filename)->
 	wxMenuBar:append(MenuBar,File,"&File"),
 	wxFrame:setMenuBar(Frame,MenuBar),
     wxFrame:show(Frame),  
-    Panel=#panel{panel=wxPanel:new(Frame,[{size,{1000,600}}]),
-				 frame=Frame,
-				 right_data=Xs,
-				 zoomin_data=Zs},
-    lists:map(fun(X)->
-					  wxEvtHandler:connect(Panel#panel.panel,X) 
+    Panel=wxPanel:new(Frame,[{size,{1000,600}}]),
+    lists:map(fun(XX)->
+					  wxEvtHandler:connect(Panel,XX) 
 			  end, ?CONTROLS),
 	wxFrame:connect(Frame,command_menu_selected),
 %	wxFrame:connect(Frame,close_window),
-    draw(Panel,Datapack),
-    loop(Panel,Datapack),
-	wx:destroy().
+    Datapack=buffdets:open(Filename,Panel,Frame),
+    NDatapack=draw(Datapack),
+    loop(NDatapack).
 
-
-draw(Panel, Datapack)->
-    Values = buffdets:getData(Panel#panel.xpos,Panel#panel.width,Panel#panel.zoomlvl,Datapack),
-    io:write(length(lists:nth(1,Values))),io:nl(),
-    Paint = wxBufferedPaintDC:new(Panel#panel.panel),
+draw(Datapack)->
+    {Values,NDatapack} = buffdets:read(Datapack),
+    Paint = wxBufferedPaintDC:new(Datapack#buffdets.panel),
     wxDC:clear(Paint),
     plotter:drawCoreLines(Paint,Values),
-    wxBufferedPaintDC:destroy(Paint).
+    wxBufferedPaintDC:destroy(Paint),
+	NDatapack.
 
 
-loop(Panel,Datapack)->
+loop(Datapack)->
 	receive
 		?QUIT->
-			wxWindow:close(Panel#panel.frame,[]);
-		WxEvent->
-			NPanel=change_state(WxEvent,Panel),
-			draw(NPanel,Datapack),
-			loop(NPanel,Datapack)
+			wxWindow:close(Datapack#buffdets.frame,[]),
+			wx:destroy();
+		WxEvent when erlang:is_record(WxEvent,wx)->
+			case change_state(WxEvent,Datapack) of
+				same->
+					NNDatapack=Datapack;
+				NDatapack->
+					NNDatapack=draw(NDatapack)
+			end,
+			case NNDatapack#buffdets.mode of
+				ready->
+					loop(NNDatapack);
+				update ->
+					receive
+						{new_buffer,N3Datapack}->
+							loop(N3Datapack)
+					end
+			end
     end.
 
-change_state(How,Panel)->
+change_state(How,Datapack)->
+	{ZoomLvl,Xpos} = Datapack#buffdets.pos,
     case How of
 		?RESIZE->
-		 	io:write(yuuu),
-			Panel;
+			same;
 		?LEFT->
-			if Panel#panel.left_data>=?STEP ->
-					Panel#panel{xpos=Panel#panel.xpos-?STEP,
-								left_data=Panel#panel.left_data-?STEP,
-								right_data=Panel#panel.right_data+?STEP};
-			   true -> Panel
+			if Datapack#buffdets.left_data>=?STEP ->
+					Datapack#buffdets{pos={ZoomLvl,Xpos-?STEP},
+								left_data=Datapack#buffdets.left_data-?STEP,
+								right_data=Datapack#buffdets.right_data+?STEP};
+			   true -> same
 			end;
 		?RIGHT->
-			if Panel#panel.right_data>=?STEP ->
-					Panel#panel{xpos=Panel#panel.xpos+?STEP,
-								left_data=Panel#panel.left_data+?STEP,
-								right_data=Panel#panel.right_data-?STEP};
-			   true -> Panel
+			if Datapack#buffdets.right_data>=?STEP ->
+					Datapack#buffdets{pos={ZoomLvl,Xpos+?STEP},
+								left_data=Datapack#buffdets.left_data+?STEP,
+								right_data=Datapack#buffdets.right_data-?STEP};
+			   true -> same
 			end;
 		?ZOOM_IN->
-			if Panel#panel.zoomin_data>0 ->
-					Panel#panel{zoomlvl=Panel#panel.zoomlvl+1,
-								xpos=2*Panel#panel.xpos-1,
-								left_data=2*Panel#panel.left_data,
-								right_data=2*Panel#panel.right_data,
-								zoomin_data=Panel#panel.zoomin_data-1,
-								zoomout_data=Panel#panel.zoomout_data+1};
-			   true -> Panel
+			if Datapack#buffdets.zoomin_data>0 ->
+					Datapack#buffdets{pos={ZoomLvl-1,Xpos},
+								left_data=2*Datapack#buffdets.left_data,
+								right_data=2*Datapack#buffdets.right_data,
+								zoomin_data=Datapack#buffdets.zoomin_data-1,
+								zoomout_data=Datapack#buffdets.zoomout_data+1};
+			   true -> same
 			end;
 		?ZOOM_OUT->
-			if Panel#panel.zoomout_data>0 ->
-					Panel#panel{zoomlvl=Panel#panel.zoomlvl-1,
-								xpos=(Panel#panel.xpos+1) div 2,
-								left_data=Panel#panel.left_data div 2,
-								right_data=Panel#panel.right_data div 2,
-								zoomin_data=Panel#panel.zoomin_data+1,
-								zoomout_data=Panel#panel.zoomout_data-1};
-			   true -> Panel
+			if Datapack#buffdets.zoomout_data>0 ->
+					Datapack#buffdets{pos={ZoomLvl+1,Xpos},
+								left_data=Datapack#buffdets.left_data div 2,
+								right_data=Datapack#buffdets.right_data div 2,
+								zoomin_data=Datapack#buffdets.zoomin_data+1,
+								zoomout_data=Datapack#buffdets.zoomout_data-1};
+			   true -> same
 			end;
 
 		_->
-			Panel
+			same
     end.
