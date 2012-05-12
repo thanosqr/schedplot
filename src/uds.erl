@@ -53,6 +53,7 @@ draw(Datapack)->
     {Values,NDatapack} = buffdets:read(Datapack),
     Paint = wxBufferedPaintDC:new(Datapack#buffdets.panel),
     wxDC:clear(Paint),
+	plotter:drawGrid(Paint),
     plotter:drawCoreLines(Paint,Values),
     wxBufferedPaintDC:destroy(Paint),
 	NDatapack.

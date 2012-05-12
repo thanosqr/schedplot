@@ -84,10 +84,10 @@ create_buffer(Tab,BufferXsize,BufferZsize,CoreN,Panel,Frame,Zoom)->
 							 width=1000,
 							 panel=Panel,
 							 frame=Frame,
-							 left_data=Xs,
-							 right_data=Xs,
-							 zoomin_data=Zs,
-							 zoomout_data=0,
+							 left_data=Xs*Xs,
+							 right_data=Xs*Xs,
+							 zoomin_data=Zs*Zs,
+							 zoomout_data=Zs*Zs,
 							 pos={round(BufferZsize/2),
 								  round(BufferXsize/2)*?DETS_PACK_SIZE}
 							}).	
