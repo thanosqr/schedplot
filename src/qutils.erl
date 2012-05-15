@@ -34,5 +34,6 @@ sublist(List,Index,Len)->
 		if length(List) > Index ->
 						lists:sublist(List,Index,Len);
 			 true ->
-						[]
+				io:write({Index,Len}),
+				lists:map(fun(_)->0 end,lists:seq(1,Len))
 		end.

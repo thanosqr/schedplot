@@ -84,10 +84,10 @@ create_buffer(Tab,BufferXsize,BufferZsize,CoreN,Panel,Frame,Zoom)->
 							 width=1000,
 							 panel=Panel,
 							 frame=Frame,
-							 left_data=Xs*Xs,
+							 left_data=0,
 							 right_data=Xs*Xs,
 							 zoomin_data=Zs*Zs,
-							 zoomout_data=Zs*Zs,
+							 zoomout_data=0,
 							 pos={round(BufferZsize/2),
 								  round(BufferXsize/2)*?DETS_PACK_SIZE}
 							}).	
@@ -117,7 +117,7 @@ get_from_dets(ZoomStart,ZoomEnd,XStart,XEnd,CoreN,Tab)->
 			 lists:map(fun(X)->
 				case dets:match(Tab,{{CoreID,Zoom,X},'_','$1'}) of
 					[[Values]] ->Values;
-					[] ->io:write({CoreID,Zoom,X}),[]
+					[] ->[]
 				end
 			  end, lists:seq(XStart,XEnd,?DETS_PACK_SIZE))
 			end,lists:seq(1,CoreN))
@@ -128,6 +128,7 @@ get_from_dets(ZoomStart,ZoomEnd,XStart,XEnd,CoreN,Tab)->
 category(Datapack)->
 	{ZoomLvl,Xpos} = Datapack#buffdets.pos,
 	Width = Datapack#buffdets.width,
+io:write({ZoomLvl,Xpos,Width}),io:nl(),
 	if ZoomLvl>Datapack#buffdets.uz->
 			{1,0};
 	   ZoomLvl<Datapack#buffdets.lz ->
