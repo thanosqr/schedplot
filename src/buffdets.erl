@@ -88,8 +88,8 @@ create_buffer(Tab,BufferXsize,BufferZsize,CoreN,Panel,Frame,Zoom)->
 							 right_data=Xs*Xs,
 							 zoomin_data=Zs*Zs,
 							 zoomout_data=0,
-							 pos={round(BufferZsize/2),
-								  round(BufferXsize/2)*?DETS_PACK_SIZE}
+							 pos={1+(BufferZsize div 2),
+								  (1+(BufferXsize div 2))*?DETS_PACK_SIZE}
 							}).	
 
 refresh_buffer({Zadj,Xadj},Old)->
@@ -128,7 +128,6 @@ get_from_dets(ZoomStart,ZoomEnd,XStart,XEnd,CoreN,Tab)->
 category(Datapack)->
 	{ZoomLvl,Xpos} = Datapack#buffdets.pos,
 	Width = Datapack#buffdets.width,
-io:write({ZoomLvl,Xpos,Width}),io:nl(),
 	if ZoomLvl>Datapack#buffdets.uz->
 			{1,0};
 	   ZoomLvl<Datapack#buffdets.lz ->

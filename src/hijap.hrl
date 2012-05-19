@@ -1,3 +1,4 @@
+-include_lib("wx/include/wx.hrl").
 -define(DETS_PACK_SIZE,2442).
 
 -define(DEFAULT_FNAME,trace_famdict).
@@ -6,7 +7,7 @@
 
 -define(MAX_DUR,63).
 -define(MAX_TIME,255).
-
+-define(ANY,?wxID_ANY).
 
 -record(buffdets, {data,
 				   tab,
@@ -24,5 +25,7 @@
 				   left_data=0,
 				   right_data,
 				   zoomin_data,
-				   zoomout_data=0
+				   zoomout_data=0,
+				   labels=[]
 				  }).
+%zoom level: 0 = 1-1, max_zoom = reduced to 1 value

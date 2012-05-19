@@ -1,7 +1,6 @@
 -module(qraph).
 -compile(export_all).
 -include("hijap.hrl").
--include_lib("wx/include/wx.hrl").
 
 -define(STEP,5).
 

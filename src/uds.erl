@@ -1,6 +1,6 @@
 -module(uds).
 -compile(export_all).
--include_lib("wx/include/wx.hrl").
+
 -include("hijap.hrl").
 
 -define(HEIGHT_INT,42). % graph height + space between cores in px
@@ -13,7 +13,7 @@
 -define(CONTROLS,[left_up,mousewheel,left_dclick,key_down,size]).
 
 -define(EXIT,?wxID_EXIT).
--define(ANY,?wxID_ANY).
+
 -define(ZOOM_IN,#wx{event=#wxKey{keyCode=?WXK_NUMPAD_ADD}}).
 -define(ZOOM_OUT,#wx{event=#wxKey{keyCode=?WXK_NUMPAD_SUBTRACT}}).
 -define(LEFT,#wx{event=#wxKey{keyCode=?WXK_LEFT}}).
@@ -32,13 +32,14 @@ init()->
 
 init(Filename)->
     Wx=wx:new(),
-    Frame=wxFrame:new(Wx,?ANY,"",[{size,{1000,600}}]),  
+    Frame=wxFrame:new(Wx,?ANY,"",[{size,{1000,700}}]),  
 	MenuBar = wxMenuBar:new(),
 	File = wxMenu:new(),
 	wxMenu:append(File,?EXIT,"Quit"),
 	wxMenuBar:append(MenuBar,File,"&File"),
 	wxFrame:setMenuBar(Frame,MenuBar),
     wxFrame:show(Frame),  
+
     Panel=wxPanel:new(Frame,[{size,{1000,600}}]),
     lists:map(fun(XX)->
 					  wxEvtHandler:connect(Panel,XX) 
@@ -46,16 +47,20 @@ init(Filename)->
 	wxFrame:connect(Frame,command_menu_selected),
 %	wxFrame:connect(Frame,close_window),
     Datapack=buffdets:open(Filename,Panel,Frame),
-    NDatapack=draw(Datapack),
+    NDatapack=draw(Datapack#buffdets{labels=
+              plotter:create_labels(Frame,Datapack#buffdets.width)}),
     loop(NDatapack).
 
 draw(Datapack)->
     {Values,NDatapack} = buffdets:read(Datapack),
     Paint = wxBufferedPaintDC:new(Datapack#buffdets.panel),
     wxDC:clear(Paint),
-	plotter:drawGrid(Paint),
+	plotter:drawGrid(Paint,NDatapack#buffdets.offset,
+					 NDatapack#buffdets.pos,
+					 NDatapack#buffdets.labels),
     plotter:drawCoreLines(Paint,Values),
     wxBufferedPaintDC:destroy(Paint),
+
 	NDatapack.
 
 

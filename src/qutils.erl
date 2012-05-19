@@ -34,6 +34,12 @@ sublist(List,Index,Len)->
 		if length(List) > Index ->
 						lists:sublist(List,Index,Len);
 			 true ->
-				io:write({Index,Len}),
 				lists:map(fun(_)->0 end,lists:seq(1,Len))
 		end.
+
+zip3(A,B)->
+	lists:zip3(
+	  lists:sublist(A,length(B)),
+	  lists:sublist(B,length(A)),
+	  lists:seq(min(length(A),length(B))-1,0,-1)
+	 ).
