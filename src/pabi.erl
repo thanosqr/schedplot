@@ -111,14 +111,14 @@ mfa_encode(MFAin,MFAout,Famdict)->
     {ID1,NFamdict1}=famdict:check(MFAin,Famdict),
     {ID2,NFamdict}=famdict:check(MFAout,NFamdict1),
     case {ID1,ID2} of
-	{{ID1f,0},{ID2f,0}}->
-	    {<<ID1f:8,ID2f:8>>,NFamdict,1,0};
-	{{ID1f,ID1m},{ID2f,0}}->
-	    {<<ID1f:8,ID2f:8,ID1m:4,0:4>>,NFamdict,1,1};
-	{{ID1f,0},{ID2f,ID2m}}->
-	    {<<ID1f:8,ID2f:8,0:4,ID2m:4>>,NFamdict,1,1};
-	{{ID1f,ID1m},{ID2f,ID2m}}->
-	    {<<ID1f:8,ID2f:8,ID1m:4,ID2m:4>>,NFamdict1,1,1}
+		{{ID1f,0},{ID2f,0}}->
+			{<<ID1f:8,ID2f:8>>,NFamdict,1,0};
+		{{ID1f,ID1m},{ID2f,0}}->
+			{<<ID1f:8,ID2f:8,ID1m:4,0:4>>,NFamdict,1,1};
+		{{ID1f,0},{ID2f,ID2m}}->
+			{<<ID1f:8,ID2f:8,0:4,ID2m:4>>,NFamdict,1,1};
+		{{ID1f,ID1m},{ID2f,ID2m}}->
+			{<<ID1f:8,ID2f:8,ID1m:4,ID2m:4>>,NFamdict1,1,1}
     end.
 	    
 time_rec_encode(Time)->
