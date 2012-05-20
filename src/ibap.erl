@@ -29,12 +29,24 @@ get_packet(Bytes)->
 	end_of_file ->
 	    end_of_file;
 	{Duration1,Bytes2}->
-	    {Duration,Fo,Fm,Bytes3}=get_duration(Duration1,Bytes2),
-	    {Time,Bytes4} = get_time(Bytes3),
-	    {PID,Bytes5} = get_pid(Bytes4),
-	    {MFA,Bytes6} = get_mfa(Fo,Fm,Bytes5),
-	    {Bytes6,pack(Duration,Time,PID,MFA)}
-    end.
+			case get_duration(Duration1,Bytes2) of
+				{Duration,Fo,Fm,Bytes3}->
+					case get_time(Bytes3) of
+						{Time,Bytes4} ->
+							case get_pid(Bytes4) of
+								{PID,Bytes5} ->
+									case get_mfa(Fo,Fm,Bytes5) of
+										{MFA,Bytes6} ->
+											{Bytes6,pack(Duration,Time,PID,MFA)};
+										end_of_file -> end_of_file
+									end;
+								end_of_file -> end_of_file
+							end;
+						end_of_file -> end_of_file
+					end;
+				end_of_file -> end_of_file
+			end
+	end.
 
 get_byte(Bytes)->
     case Bytes#bytes.left of
@@ -51,56 +63,109 @@ get_byte(Bytes)->
 	    {Byte, Bytes#bytes{data=Rest,left=N-1}}
     end.
 
+get_2_bytes(Bytes)->
+	case get_byte(Bytes) of
+		{Byte1,Bytes1}->
+			case get_byte(Bytes1) of
+				{Byte2,Bytes2}->
+					{Byte1,Byte2,Bytes2};
+				end_of_file ->
+					end_of_file
+			end;
+		end_of_file ->
+			end_of_file
+	end.
+
+get_3_bytes(Bytes)->
+	case get_byte(Bytes) of
+		{Byte1,Bytes1}->
+			case get_byte(Bytes1) of
+				{Byte2,Bytes2}->
+					case get_byte(Bytes2) of
+						{Byte3,Bytes3} ->
+							{Byte1,Byte2,Byte3,Bytes3};
+						end_of_file ->
+							end_of_file
+					end;
+				end_of_file ->
+					end_of_file
+			end;
+		end_of_file ->
+			end_of_file
+	end.
 
 get_duration(Duration1,Bytes2)->    	       
     <<Fo:1,Fm:1,Duration:6>> = <<Duration1>>,
     if Duration<?MAX_DUR->
 	    {Duration,Fo,Fm,Bytes2};
        Duration==?MAX_DUR ->
-	    {DurationRec,Bytes3} = get_till_not_max(Duration,Bytes2,255),
-	    {DurationRec,Fo,Fm,Bytes3}
+			case get_till_not_max(Duration,Bytes2,255) of
+				{DurationRec,Bytes3} ->
+					{DurationRec,Fo,Fm,Bytes3};
+				end_of_file ->
+					end_of_file
+			end
     end.
 
 get_till_not_max(Acc,Bytes,Max)->
-    {D,Bytes2}=get_byte(Bytes),
-    if D<Max->
-	    {Acc+D,Bytes2};
-       D==Max ->
-	    get_till_not_max(Acc+D,Bytes2,Max)
-    end.
-
+	case get_byte(Bytes) of
+		{D,Bytes2} ->
+			if D<Max->
+					{Acc+D,Bytes2};
+			   D==Max ->
+					get_till_not_max(Acc+D,Bytes2,Max)
+			end;
+		end_of_file ->
+			end_of_file
+	end.
 
 get_time(Bytes)->		
-    {T,Bytes2} = get_byte(Bytes),
-    if T<?MAX_TIME->
-	    {T,Bytes2};
-       T==?MAX_TIME ->
-	    get_till_not_max(T,Bytes2,?MAX_TIME)
-    end.
+	case get_byte(Bytes) of
+		{T,Bytes2}->
+			if T<?MAX_TIME->
+					{T,Bytes2};
+			   T==?MAX_TIME ->
+					get_till_not_max(T,Bytes2,?MAX_TIME)
+			end;
+		end_of_file->
+			end_of_file
+	end.
 
 get_pid(Bytes)->
-    {B1,Bytes1} = get_byte(Bytes),
-    {B2,Bytes2} = get_byte(Bytes1),
-    <<_:1,PID:15>> = <<B1:8,B2:8>>,
-    {<<0:1,PID:15>>,Bytes2}.
+	case get_2_bytes(Bytes) of
+		{B1,B2,Bytes2}->
+			<<_:1,PID:15>> = <<B1:8,B2:8>>,
+			{<<0:1,PID:15>>,Bytes2};
+		end_of_file ->
+			end_of_file
+	end.
 
 get_mfa(Fo,Fm,Bytes)->
     case {Fo,Fm} of
-	{0,0}->
-	    get_byte(Bytes);
-	{0,1} ->
-	    {IDf,Bytes1}=get_byte(Bytes),
-	    {IDm,Bytes2}=get_byte(Bytes1),
-	    {{IDf,IDm},Bytes2};
-	{1,0} ->
-	    {MFA1,Bytes1}=get_byte(Bytes),
-	    {MFA2,Bytes2}=get_byte(Bytes1),
-	    {{MFA1,MFA2},Bytes2};
-	{1,1} ->
-	    {MFA1,Bytes1}=get_byte(Bytes),
-	    {MFA2,Bytes2}=get_byte(Bytes1),
-	    {Modulos,Bytes3}=get_byte(Bytes2),
-	    {{MFA1,MFA2,Modulos},Bytes3}
+		{0,0}->
+			get_byte(Bytes);
+		{0,1} ->
+			case get_2_bytes(Bytes) of
+				{IDf,IDm,Bytes2}->
+					{{IDf,IDm},Bytes2};
+				end_of_file->
+					end_of_file
+			end;
+		{1,0} ->
+			case get_2_bytes(Bytes) of
+				{MFA1,MFA2,Bytes2}->
+					{{MFA1,MFA2},Bytes2};
+				end_of_file->
+					end_of_file
+			end;
+
+		{1,1} ->
+			case get_3_bytes(Bytes) of
+				{MFA1,MFA2,Modulos,Bytes3}->
+					{{MFA1,MFA2,Modulos},Bytes3};
+				end_of_file->
+					end_of_file
+			end
     end.
 
 
