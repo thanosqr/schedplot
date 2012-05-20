@@ -271,21 +271,21 @@ open_in(InName,CoreID)->
 decoder(OutName,InName,CoreID,GU,PID)->
     Out=open_out(OutName,CoreID),
     In =open_in(InName,CoreID), 
-    PID!decode(In,Out,GU).
+    PID!{decoder,decode(In,Out,GU)}.
     
 
 decode_all()->
     decode_all(decoded,trace_gabi,8,{1,6}).
 decode_all(OutName,InName,GU,{FromCore,ToCore})->
     lists:map(fun(CoreID)->
-		      spawn(ibap,decoder,[OutName,InName,CoreID,GU,self()])
-	      end, lists:seq(FromCore,ToCore)),
+					  spawn(ibap,decoder,[OutName,InName,CoreID,GU,self()])
+			  end, lists:seq(FromCore,ToCore)),
     lists:max(lists:map(fun(_)->
-				receive
-			  N->
-			      N
-		      end end, lists:seq(FromCore,ToCore))).
-    
+								receive
+									{decoder,N}->
+										N
+								end end, lists:seq(FromCore,ToCore))).
+
 
 
 generate_zoom_lvls(Dets,{FromCore,ToCore},MaxZoomOut)->
