@@ -36,3 +36,6 @@ stop()->
 
 start()->
 	start({timer_wheel,wheel,[500]}).
+
+tw(X)->
+	start({timer_wheel,wheel,[X]}).
