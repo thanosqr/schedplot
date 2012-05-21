@@ -26,6 +26,8 @@
 				   right_data,
 				   zoomin_data,
 				   zoomout_data=0,
-				   labels=[]
+				   labels=[],
+				   zoom_label,
+				   max_zoom
 				  }).
 %zoom level: 0 = 1-1, max_zoom = reduced to 1 value

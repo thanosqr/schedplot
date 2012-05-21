@@ -18,6 +18,7 @@
 -define(ZOOM_OUT,#wx{event=#wxKey{keyCode=?WXK_NUMPAD_SUBTRACT}}).
 -define(LEFT,#wx{event=#wxKey{keyCode=?WXK_LEFT}}).
 -define(RIGHT,#wx{event=#wxKey{keyCode=?WXK_RIGHT}}).
+-define(RESET,#wx{event=#wxKey{keyCode=?WXK_HOME}}).
 -define(RESIZE,#wx{event=wxEVT_SIZE}).
 -define(QUIT,#wx{id=?EXIT,event=#wxCommand{type=command_menu_selected}}).
 
@@ -47,8 +48,7 @@ init(Filename)->
 	wxFrame:connect(Frame,command_menu_selected),
 %	wxFrame:connect(Frame,close_window),
     Datapack=buffdets:open(Filename,Panel,Frame),
-    NDatapack=draw(Datapack#buffdets{labels=
-              plotter:create_labels(Frame,Datapack#buffdets.width)}),
+    NDatapack=draw(Datapack),
     loop(NDatapack).
 
 draw(Datapack)->
@@ -60,7 +60,9 @@ draw(Datapack)->
 					 NDatapack#buffdets.labels),
     plotter:drawCoreLines(Paint,Values),
     wxBufferedPaintDC:destroy(Paint),
-
+	update_zoom_label(NDatapack#buffdets.pos,
+					  NDatapack#buffdets.offset,
+					  NDatapack#buffdets.zoom_label),
 	NDatapack.
 
 
@@ -124,7 +126,22 @@ change_state(How,Datapack)->
 								zoomout_data=Datapack#buffdets.zoomout_data-1};
 			   true -> same
 			end;
-
+		?RESET ->
+			{BufferXsize,BufferZsize,CoreN}=Datapack#buffdets.static,
+			buffdets:create_buffer(Datapack#buffdets.tab,
+								   BufferXsize,BufferZsize,CoreN,
+								   Datapack#buffdets.panel,
+								   Datapack#buffdets.frame,
+								   Datapack#buffdets.max_zoom,
+								   Datapack#buffdets.labels,
+								   Datapack#buffdets.width,
+								   Datapack#buffdets.zoom_label);
 		_->
 			same
     end.
+
+
+update_zoom_label({Z,_},{ZOffset,_},Label)->
+	wxStaticText:setLabel(Label,
+	  lists:concat(["Zoom: 1/", 
+					integer_to_list(round(math:pow(2,Z+ZOffset)))])).

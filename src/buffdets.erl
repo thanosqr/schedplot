@@ -12,10 +12,12 @@ open(Filename,Panel,Frame)->
     open(Filename,?DEF_BUFFER_X,?DEF_BUFFER_Z,Panel,Frame).
 
 open(Filename,BufferXsize,BufferZsize,Panel,Frame)->
+	Width=1000,
     {ok,Tab} = dets:open_file(Filename,[{access,read}]),
     [{init_state,Max_Zoom,CoreN}]=dets:lookup(Tab,init_state),
-    Zoom=Max_Zoom-5,
-	create_buffer(Tab,BufferXsize,BufferZsize,CoreN,Panel,Frame,Zoom).
+	Labels=plotter:create_labels(Frame,Width),
+	Zoom_Label=wxStaticText:new(Frame,?ANY,"",[{pos,{Width-144,642}}]),
+	create_buffer(Tab,BufferXsize,BufferZsize,CoreN,Panel,Frame,Max_Zoom,Labels,Width,Zoom_Label).
 
 getData(Datapack)->
 	{ZoomLvl,From} = Datapack#buffdets.pos,
@@ -72,16 +74,18 @@ update(PID,Adj,Old)->
 
 
 
-create_buffer(Tab,BufferXsize,BufferZsize,CoreN,Panel,Frame,Zoom)->
+create_buffer(Tab,BufferXsize,BufferZsize,CoreN,Panel,Frame,Max_Zoom,Labels,Width,Zoom_Label)->
 	Xs=10000,
 	Zs = 42,
+% When the zoom_lvl = Max_Zoom, the whole graph is 1px.
+	Zoom=Max_Zoom-trunc(math:log(Width)/math:log(2)),
 	refresh_buffer({0,0},
 				   #buffdets{tab=Tab,
 							 offset={Zoom-(BufferZsize div 2),
 									 -(BufferXsize div 2)*?DETS_PACK_SIZE+1},
 							 mode=ready,
 							 static={BufferXsize,BufferZsize,CoreN},
-							 width=1000,
+							 width=Width,
 							 panel=Panel,
 							 frame=Frame,
 							 left_data=0,
@@ -89,7 +93,10 @@ create_buffer(Tab,BufferXsize,BufferZsize,CoreN,Panel,Frame,Zoom)->
 							 zoomin_data=Zs*Zs,
 							 zoomout_data=0,
 							 pos={1+(BufferZsize div 2),
-								  (1+(BufferXsize div 2))*?DETS_PACK_SIZE}
+								  (1+(BufferXsize div 2))*?DETS_PACK_SIZE},
+							 labels=Labels,
+							 zoom_label=Zoom_Label,
+							 max_zoom=Max_Zoom
 							}).	
 
 refresh_buffer({Zadj,Xadj},Old)->
@@ -139,3 +146,4 @@ category(Datapack)->
 	   true ->
 			nu
 	end.
+
