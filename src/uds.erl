@@ -25,13 +25,8 @@
 
 												%when using buffdets zoom level refers to the index of the buffered zoom levels; ie if we buffer 5 zoom levels the possible values are 1..5 which can refer to n..n+5 actual IDs.
 
-in()->
-    init(analyzed_trace).
 
-init()->
-    init(demo_trace).
-
-init(Filename)->
+init(FolderName)->
     Wx=wx:new(),
     Frame=wxFrame:new(Wx,?ANY,"",[{size,{1000,700}}]),  
 	MenuBar = wxMenuBar:new(),
@@ -47,7 +42,7 @@ init(Filename)->
 			  end, ?CONTROLS),
 	wxFrame:connect(Frame,command_menu_selected),
 %	wxFrame:connect(Frame,close_window),
-    Datapack=buffdets:open(Filename,Panel,Frame),
+    Datapack=buffdets:open(FolderName,Panel,Frame),
     NDatapack=draw(Datapack),
     loop(NDatapack).
 

@@ -8,12 +8,13 @@
 
 %  [ zoom levels [cores [ data [values]]]]] 
 
-open(Filename,Panel,Frame)->
-    open(Filename,?DEF_BUFFER_X,?DEF_BUFFER_Z,Panel,Frame).
+open(FolderName,Panel,Frame)->
+    open(FolderName,?DEF_BUFFER_X,?DEF_BUFFER_Z,Panel,Frame).
 
-open(Filename,BufferXsize,BufferZsize,Panel,Frame)->
+open(FolderName,BufferXsize,BufferZsize,Panel,Frame)->
 	Width=1000,
-    {ok,Tab} = dets:open_file(Filename,[{access,read}]),
+    {ok,Tab} = dets:open_file(lists:concat([atom_to_list(FolderName),"/analyzed_trace"]),
+							  [{access,read}]),
     [{init_state,Max_Zoom,CoreN}]=dets:lookup(Tab,init_state),
 	Labels=plotter:create_labels(Frame,Width),
 	Zoom_Label=wxStaticText:new(Frame,?ANY,"",[{pos,{Width-144,642}}]),

@@ -261,24 +261,22 @@ open_out(OutName,CoreID)->
 	     timestart=0}.
 
 open_in(InName,CoreID)->
-    IName=string:concat(atom_to_list(InName),integer_to_list(CoreID)),
+    IName=string:concat(InName,integer_to_list(CoreID)),
     {ok,File}=file:open(IName,[read,raw,compressed]),
     #in{file=#bytes{file=File,data=[],left=0},
 	left=0,
 	value=1,
 	ones=0}.
     
-decoder(OutName,InName,CoreID,GU,PID)->
-    Out=open_out(OutName,CoreID),
-    In =open_in(InName,CoreID), 
+decoder(FolderName,CoreID,GU,PID)->
+    Out=open_out(lists:concat([atom_to_list(FolderName),"/analyzed_trace"]),CoreID),
+    In =open_in(lists:concat([atom_to_list(FolderName),"/trace_gabi"]),CoreID), 
     PID!{decoder,decode(In,Out,GU)}.
     
 
-decode_all()->
-    decode_all(decoded,trace_gabi,8,{1,6}).
-decode_all(OutName,InName,GU,{FromCore,ToCore})->
+decode_all(FolderName,GU,{FromCore,ToCore})->
     lists:map(fun(CoreID)->
-					  spawn(ibap,decoder,[OutName,InName,CoreID,GU,self()])
+					  spawn(ibap,decoder,[FolderName,CoreID,GU,self()])
 			  end, lists:seq(FromCore,ToCore)),
     lists:max(lists:map(fun(_)->
 								receive
@@ -321,30 +319,24 @@ zoom_out([]) ->
 
     
 
-analyze(InName,OutName,GU,{FromCore,ToCore})->
-    Longest=decode_all(OutName,InName,GU,{FromCore,ToCore}),
+analyze(FolderName,GU,{FromCore,ToCore})->
+    Longest=decode_all(FolderName,GU,{FromCore,ToCore}),
     MaxZoomLevel=erlang:trunc(math:log(Longest)/math:log(2))+1,
-    {ok,Dets}=dets:open_file(OutName),
+    {ok,Dets}=dets:open_file(lists:concat([atom_to_list(FolderName),"/analyzed_trace"])),
     dets:insert(Dets,{init_state,MaxZoomLevel,ToCore-FromCore+1}),
     generate_zoom_lvls(Dets,{FromCore,ToCore},MaxZoomLevel),
     dets:insert(Dets,{cores,ToCore-FromCore+1}),
     dets:close(Dets);
-analyze(InName,OutName,GU,CoreN)->
-    analyze(InName,OutName,GU,{1,CoreN}).
+analyze(FolderName,GU,CoreN)->
+    analyze(FolderName,GU,{1,CoreN}).
    
-analyze(InName,OutName)->
-		HName=string:concat(atom_to_list(InName),atom_to_list('_header')),
-		{ok,F}=file:open(HName,[read]),
-		{ok,CoreN} = io:read(F,''),
-		file:close(F),
-io:write(CoreN),
-    analyze(InName,OutName,8,CoreN).
+analyze(FolderName)->
+	HName=string:concat(atom_to_list(FolderName),"/trace_gabi_header"),
+	{ok,F}=file:open(HName,[read]),
+	{ok,CoreN} = io:read(F,''),
+	file:close(F),
+    analyze(FolderName,8,CoreN).
 
 
 analyze()->
-    analyze(trace_gabi,analyzed_trace).
-
-
-display()->
-    {ok,D} = dets:open_file(analyzed_trace,[]),
-    dets:match_object(D,'_').
+    analyze(?DEFAULT_FOLDER_NAME).

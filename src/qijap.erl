@@ -2,20 +2,17 @@
 -compile(export_all).
 -include("hijap.hrl").
 
-view(Filename)->
-	uds:init(Filename).
+view(FolderName)->
+	uds:init(FolderName).
 
 view()->
-	view(?DEFAULT_TNAME).
+	view(?DEFAULT_FOLDER_NAME).
 
-analyze(In, Out)->
-	ibap:analyze(In,Out).
+analyze(FolderName)->
+	ibap:analyze(FolderName).
 
 analyze()->
-	analyze(?DEFAULT_GNAME,?DEFAULT_TNAME).
-
-analyze(CoreN)->
-    ibap:analyze(?DEFAULT_GNAME,?DEFAULT_TNAME,8,CoreN).
+	analyze(?DEFAULT_FOLDER_NAME).
 
 start(M,F,Args)->
 	pcore:start(M,F,Args).
@@ -25,11 +22,11 @@ start({M,F,Args})->
 start({M,F,Args},Flags)->
 	start(M,F,Args,erlang:system_info(schedulers),Flags).
 
-start(M,F,Args,GName,FName,CoreN,Flags)->
-	pcore:start(M,F,Args,GName,FName,CoreN,Flags).
+start(M,F,Args,FolderName,CoreN,Flags)->
+	pcore:start(M,F,Args,FolderName,CoreN,Flags).
 
 start(M,F,Args,CoreN,Flags)->
-	start(M,F,Args,?DEFAULT_GNAME,?DEFAULT_FNAME,CoreN,Flags).
+	start(M,F,Args,?DEFAULT_FOLDER_NAME,CoreN,Flags).
 
 stop()->
 	pcore:stop().
