@@ -17,8 +17,8 @@ analyze()->
 stop()->
 	pcore:stop().
 
-tw(X)->
-	start({timer_wheel,wheel,[X]}).
+%% tw(X)->
+%% 	start({timer_wheel,wheel,[X]}).
 
 start(Fun,FolderName,Flags)->
 	pcore:start(Fun,FolderName,erlang:system_info(schedulers),Flags).
