@@ -88,10 +88,10 @@ encode({PID,in,MFAin,TimeIn},{PID,out,MFAout,TimeOut},Famdict,PrevTime)->
     {MFAbytes,NFamdict,Fo,Fm} = mfa_encode(MFAin,MFAout,Famdict),
     DurationBytes = duration_encode(TimeOut,TimeIn,Fo,Fm),
     {[DurationBytes,TimeBytes,PIDbytes,MFAbytes],NFamdict,NPrevTime};
-encode({PID1,in,MFA1,T1},{PID2,out,MFA2,T2},F,P) ->
-    io:write('#--diff PID error--'),
-    io:write({PID1,MFA1,PID2,MFA2,timediff(T2,T1)}),
-    io:nl(),
+encode({_PID1,in,_MFA1,_T1},{_PID2,out,_MFA2,_T2},F,P) ->
+    %% io:write('#--diff PID error--'),
+    %% io:write({PID1,MFA1,PID2,MFA2,timediff(T2,T1)}),
+    %% io:nl(),
     {<<0:8>>,F,P}.
 
 pid_encode(PID)->

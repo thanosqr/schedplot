@@ -17,11 +17,15 @@ analyze()->
 stop()->
 	pcore:stop().
 
-%% tw(X)->
-%% 	start({timer_wheel,wheel,[X]}).
-
 start(Fun,FolderName,Flags)->
-	pcore:start(Fun,FolderName,erlang:system_info(schedulers),Flags).
+	case lists:member(gc,Flags) of
+		false->
+			pcore:start(Fun,FolderName,
+						erlang:system_info(schedulers),Flags);
+		true ->
+			pcore:start(Fun,FolderName,
+						erlang:system_info(schedulers)+1,Flags)
+	end.
 
 start(Fun,Flags) when erlang:is_list(Flags) ->
 	start(Fun,?DEFAULT_FOLDER_NAME,Flags);
@@ -30,3 +34,6 @@ start(Fun,FolderName) ->
 
 start(Fun)->
 	start(Fun,?DEFAULT_FOLDER_NAME,[]).
+
+
+	

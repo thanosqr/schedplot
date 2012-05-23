@@ -2,18 +2,6 @@
 -compile(export_all).
 -include("hijap.hrl").
 
--define(DEFAULT_FLAGS,[]).
-
-
-												%arrays are zero indexed. either fix the indexing or number of cores = real number of cores +1
-
-												% the tracing stops whenever end_tracing/0 is called
-												% default: when the given fun  returns the tracing stops
-												% if no_exit flag is used tracing wont stop when the given fun returns
-												% if end_tracing/0 is not called some of the trace might not be stored 
-												% erlang_tracing/1 ensures that the trace related to PID has been delivered
-
-
 start(Fun,FolderName,CoreN,Flags)->
 	create_folder(FolderName),
 	HName=lists:concat([atom_to_list(FolderName),atom_to_list('/trace_gabi_header')]),
@@ -24,10 +12,19 @@ start(Fun,FolderName,CoreN,Flags)->
     PIDs = lists:map(fun(X)-> spawn(pcore,start_tracer,[FolderName,X,Flags,erlang:now()]) end, lists:seq(1,CoreN)),
     PID = spawn(?MODULE,master_tracer,[array:fix(array:from_list(PIDs))]),
     register(master_tracer,PID),
-    erlang:trace(all,true,[running,
-						   scheduler_id,
-						   timestamp,
-						   {tracer,PID}]),
+	case lists:member(gc,Flags) of
+		false ->
+			erlang:trace(all,true,[running,
+								   scheduler_id,
+								   timestamp,
+								   {tracer,PID}]);
+		true ->
+			erlang:trace(all,true,[running,
+								   garbage_collection,
+								   scheduler_id,
+								   timestamp,
+								   {tracer,PID}])
+	end,
 	case Fun of
 		{M,F,Args}->
 			erlang:apply(M,F,Args);
@@ -99,14 +96,25 @@ master_tracer(PIDs)->
 			case MFA of
 				{io,wait_io_mon_reply,2} ->
 												% io:wait_io_mon_reply/2 appears to only enter the schedulers (and never leave)
-												% possibly a problem with trace&io; temporarily we ignore those messages
+												% possibly a problem with trace&io;  we ignore those messages
 												%io:write('-----------iomon error'),io:nl(),
 					master_tracer(PIDs);
 				_ ->
 					array:get(SID-1,PIDs)!{PID,IO,MFA,Time},  %0-indexed arrays
 					master_tracer(PIDs)
-			end
-    end.
+			end;
+		{trace_ts,PID,SE,_GC_Info,Time} ->
+			case SE of
+				gc_start->
+					Msg = {PID,in,{gc,gc,0},Time};
+				gc_end ->
+					Msg = {PID,out,{gc,gc,0},Time}
+			end,
+			array:get(array:size(PIDs)-1,PIDs)!Msg,
+			master_tracer(PIDs)
+	end.
+				
+		   
 
 
 create_folder(FolderName)->
