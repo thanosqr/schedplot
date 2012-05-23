@@ -6,6 +6,7 @@
 -define(DEFAULT_TNAME,analyzed_trace).
 -define(DEFAULT_FOLDER_NAME,qijap_profile).
 
+-define(VERTICAL_INT,100).
 -define(MAX_DUR,63).
 -define(MAX_TIME,255).
 -define(ANY,?wxID_ANY).
@@ -29,6 +30,7 @@
 				   zoomout_data=0,
 				   labels=[],
 				   zoom_label,
-				   max_zoom
+				   max_zoom,
+				   schedlabels
 				  }).
 %zoom level: 0 = 1-1, max_zoom = reduced to 1 value

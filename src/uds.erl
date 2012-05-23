@@ -28,7 +28,7 @@
 
 init(FolderName)->
     Wx=wx:new(),
-    Frame=wxFrame:new(Wx,?ANY,"",[{size,{1000,700}}]),  
+    Frame=wxFrame:new(Wx,?ANY,"",[{size,{1084,900}}]),  
 	MenuBar = wxMenuBar:new(),
 	File = wxMenu:new(),
 	wxMenu:append(File,?EXIT,"Quit"),
@@ -36,7 +36,7 @@ init(FolderName)->
 	wxFrame:setMenuBar(Frame,MenuBar),
     wxFrame:show(Frame),  
 
-    Panel=wxPanel:new(Frame,[{size,{1000,600}}]),
+    Panel=wxPanel:new(Frame,[{size,{1000,800}},{pos,{42,0}}]),
     lists:map(fun(XX)->
 					  wxEvtHandler:connect(Panel,XX) 
 			  end, ?CONTROLS),
@@ -53,7 +53,7 @@ draw(Datapack)->
 	plotter:drawGrid(Paint,NDatapack#buffdets.offset,
 					 NDatapack#buffdets.pos,
 					 NDatapack#buffdets.labels),
-    plotter:drawCoreLines(Paint,Values),
+    plotter:drawCoreLines(Paint,Values,NDatapack#buffdets.schedlabels),
     wxBufferedPaintDC:destroy(Paint),
 	update_zoom_label(NDatapack#buffdets.pos,
 					  NDatapack#buffdets.offset,
@@ -130,7 +130,8 @@ change_state(How,Datapack)->
 								   Datapack#buffdets.max_zoom,
 								   Datapack#buffdets.labels,
 								   Datapack#buffdets.width,
-								   Datapack#buffdets.zoom_label);
+								   Datapack#buffdets.zoom_label,
+								   Datapack#buffdets.schedlabels);
 		_->
 			same
     end.
