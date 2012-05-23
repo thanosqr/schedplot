@@ -29,7 +29,7 @@ open(FolderName,BufferXsize,BufferZsize,Panel,Frame)->
 		{ok,true} ->
 			wxStaticText:setLabel(lists:last(SchedLabels), "GC")
 	end,
-	Zoom_Label=wxStaticText:new(Frame,?ANY,"",[{pos,{Width-144,642}}]),
+	Zoom_Label=wxStaticText:new(Frame,?ANY,"",[{pos,{Width-84,842}}]),
 	create_buffer(Tab,BufferXsize,BufferZsize,CoreN,Panel,Frame,Max_Zoom,Labels,Width,Zoom_Label,SchedLabels).
 
 getData(Datapack)->
