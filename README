@@ -24,6 +24,9 @@ Flags:
 no_auto_stop
 		the profiling will not stop when Fun returns but will continue untill qijap:stop/0 is called. note that the profiling will stop if stop/0 is called even if this flag wasnt used.
 
+gc
+		profile and display the garbage collection
+
 start()->ok
 starts running the profiler (no function is called)
 
