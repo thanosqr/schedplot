@@ -14,25 +14,19 @@ analyze(FolderName)->
 analyze()->
 	analyze(?DEFAULT_FOLDER_NAME).
 
-start(M,F,Args)->
-	pcore:start(M,F,Args).
-
-start({M,F,Args})->
-	start({M,F,Args},[]).
-start({M,F,Args},Flags)->
-	start(M,F,Args,erlang:system_info(schedulers),Flags).
-
-start(M,F,Args,FolderName,CoreN,Flags)->
-	pcore:start(M,F,Args,FolderName,CoreN,Flags).
-
-start(M,F,Args,CoreN,Flags)->
-	start(M,F,Args,?DEFAULT_FOLDER_NAME,CoreN,Flags).
-
 stop()->
 	pcore:stop().
 
-start()->
-	start({timer_wheel,wheel,[500]}).
-
 tw(X)->
 	start({timer_wheel,wheel,[X]}).
+
+start(Fun,FolderName,Flags)->
+	pcore:start(Fun,FolderName,erlang:system_info(schedulers),Flags).
+
+start(Fun,Flags) when erlang:is_list(Flags) ->
+	start(Fun,?DEFAULT_FOLDER_NAME,Flags);
+start(Fun,FolderName) ->
+	start(Fun,FolderName,[]).
+
+start(Fun)->
+	start(Fun,?DEFAULT_FOLDER_NAME,[]).

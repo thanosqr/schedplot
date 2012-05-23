@@ -14,7 +14,7 @@
 												% erlang_tracing/1 ensures that the trace related to PID has been delivered
 
 
-start(M,F,Args,FolderName,CoreN,Flags)->
+start(Fun,FolderName,CoreN,Flags)->
 	create_folder(FolderName),
 	HName=lists:concat([atom_to_list(FolderName),atom_to_list('/trace_gabi_header')]),
 	{ok,FP}=file:open(HName,[write]),
@@ -28,8 +28,12 @@ start(M,F,Args,FolderName,CoreN,Flags)->
 						   scheduler_id,
 						   timestamp,
 						   {tracer,PID}]),
-    apply(M,F,Args),
-												%    tester:start(PID),
+	case Fun of
+		{M,F,Args}->
+			erlang:apply(M,F,Args);
+		Fun ->
+			erlang:apply(Fun,[])
+	end,												%    tester:start(PID),
     case lists:member(no_auto_stop,Flags) of
 		true  -> ok;
 		false -> stop()
@@ -41,7 +45,10 @@ stop()->
 stop(PID)->
 	erlang:trace_delivered(PID),
 	erlang:trace(all,false,[]),
-    master_tracer!exit.
+    master_tracer!{self(),exit},
+	receive
+		trace_stored->ok
+	end.
 
 												% we manually implement delayed write since it appears to be faster 
 												% than delayed write performed with the default flag.
@@ -58,7 +65,7 @@ start_tracer(FolderName,N,_Flags,Now)->
 tracer(Pabi,Prev)->
     receive
 		exit->
-			pabi:close(Pabi),io:write(ok);
+			pabi:close(Pabi);
 		{PID,IO,MFA,Time}->
 			P2 = {PID,IO,MFA,Time},
 			case IO of
@@ -84,10 +91,10 @@ tracer(Pabi,Prev)->
 
 master_tracer(PIDs)->
     receive
-		exit->
+		{PID,exit}->
 			lists:map(fun(P)->P!self() end,array:to_list(PIDs)),
 			lists:map(fun(_)->receive ok -> ok end end, array:to_list(PIDs)),
-			io:write(ok);
+			PID!trace_stored;
 		{trace_ts,PID,IO,SID,MFA,Time} ->
 			case MFA of
 				{io,wait_io_mon_reply,2} ->
@@ -103,6 +110,7 @@ master_tracer(PIDs)->
 
 
 create_folder(FolderName)->
+io:write(FolderName),
 	case file:make_dir(FolderName) of
 		ok ->
 			ok;

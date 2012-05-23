@@ -62,7 +62,6 @@ drawGrid(Paint,{ZOffset,XOffset},{ZoomLvl,XPos},Labels)->
 	Width=1000,
 	AbsOffset = XOffset+XPos-?DETS_PACK_SIZE,
 	Offset=AbsOffset rem ?VERTICAL_INT,
-	io:write({AbsOffset,Offset,ZoomFactor}),io:nl(),
 	wxDC:setPen(Paint,?LGrey),
 	lists:map(fun(X)->
 					  wxDC:drawLine(Paint,{X,0},{X,600})

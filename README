@@ -1,3 +1,64 @@
 Very early stages of development
 
+----------------- Compiling -----------------
 
+Simply use make:all().
+
+----------------- Basic Interface Functions -----------------
+
+start(Fun) -> ok
+start(Fun,Flags) -> ok
+start(Fun,FolderName) -> ok
+start(Fun,FolderName,Flags) -> ok
+
+Types: 
+	   Fun = {Module, Function, Args} | function()
+	   FolderName = name()
+	   Flags = [Flag]
+
+qijap:start/3 will profile Fun and store the trace in FolderName.
+if no FolderName is given, the default name will be used (qijap_profile)
+if there is a directory with the same name traces will be stored in that directory (older traces will the default names will be overwritten).
+
+Flags:
+no_auto_stop
+		the profiling will not stop when Fun returns but will continue untill qijap:stop/0 is called. note that the profiling will stop if stop/0 is called even if this flag wasnt used.
+
+start()->ok
+starts running the profiler (no function is called)
+
+stop()->ok
+stops the profiling and ensures that the traces have been delivered.
+
+
+analyze()->ok
+analyze(FolderName)->ok
+
+analyzes the traces stored in FolderName. if no name is given, the default name will be used.
+
+view()->ok
+view(FolderName)->ok
+
+displays the analyzed trace. if no name is given, the default name will be used.
+
+
+----------------- Graph Keys -----------------
+
+Left/right arrow keys to move left/right
+Numpad -/+ to zoom out/in
+Home to return to the first state (aprox. fit the screen)
+
+
+----------------- Notes -----------------
+
+Resizing the window or exiting and restarting might result in a grey window; click or move left/right to instantiate it (resizing the window is not suggested)
+
+Monitor memory consumption; sometimes trace messages are produced faster than they can be stored.
+
+----------------- Coming Soon -----------------
+
+Tracing of garbage collection
+
+Selective tracing (you can try using erlang:trace_patter/[2-3] but it has not been tested so far)
+
+More user-friendly graph interface
