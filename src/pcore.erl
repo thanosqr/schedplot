@@ -110,7 +110,6 @@ master_tracer(PIDs)->
 
 
 create_folder(FolderName)->
-io:write(FolderName),
 	case file:make_dir(FolderName) of
 		ok ->
 			ok;

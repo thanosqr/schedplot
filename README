@@ -49,6 +49,17 @@ Numpad -/+ to zoom out/in
 Home to return to the first state (aprox. fit the screen)
 
 
+----------------- Demo -----------------
+
+1> qijap:start({fib,fib,[28,6]},fib_prof).
+ok
+2> qijap:analyze(fib_prof).
+ok
+3> qijap:view(fib_prof).
+
+fib(N,M) spawns M processes that calculate fib(N) and waits for them to end.
+the result (assuming 6 cores) should be something similar to the pic in others/demo_fib.png
+
 ----------------- Notes -----------------
 
 Resizing the window or exiting and restarting might result in a grey window; click or move left/right to instantiate it (resizing the window is not suggested)

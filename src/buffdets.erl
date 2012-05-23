@@ -79,7 +79,7 @@ create_buffer(Tab,BufferXsize,BufferZsize,CoreN,Panel,Frame,Max_Zoom,Labels,Widt
 	Xs=10000,
 	Zs = 42,
 % When the zoom_lvl = Max_Zoom, the whole graph is 1px.
-	Zoom=Max_Zoom-trunc(math:log(Width)/math:log(2)),
+	Zoom=Max_Zoom-trunc(math:log(Width)/math:log(2))-1,
 	refresh_buffer({0,0},
 				   #buffdets{tab=Tab,
 							 offset={Zoom-(BufferZsize div 2),
