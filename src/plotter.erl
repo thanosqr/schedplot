@@ -54,7 +54,7 @@ drawCoreLines(Paint,CLs,SLs)->
 drawCoreLines(_,[],_,_)->ok;
 drawCoreLines(Paint,[CL|CLs],Y,[SL|SLs])->
     drawCoreLine(Paint,CL,Y),
-	wxWindow:move(SL,14,Y-18),
+	wxWindow:move(SL,8,Y-18),
     drawCoreLines(Paint,CLs,Y+42,SLs).
 
 drawGrid(Paint,{ZOffset,XOffset},{ZoomLvl,XPos},Labels)->
