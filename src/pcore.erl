@@ -2,23 +2,28 @@
 -compile(export_all).
 -include("hijap.hrl").
 
-paradox_check()->
-     receive
-	{PID1,in,SID1,MFA1} ->
-	    receive
-		{PID2,in,SID2,MFA2} ->
-		    if SID1 == SID2 -> ok;
-		       SID1=/= SID2 ->
-			    io:write({PID1,PID2,SID1,SID2,MFA1,MFA2}),
-			    io:nl()
-		       end;
-		_ ->
-		    ok
+paradox_check(F,T)->
+    %%  receive
+    %% 	{PID1,in,SID1,MFA1} ->
+    %% 	    receive
+    %% 		{PID2,in,SID2,MFA2} ->
+    %% 		    if SID1 == SID2 -> ok;
+    %% 		       SID1=/= SID2 ->
+    %% 			    io:write({PID1,PID2,SID1,SID2,MFA1,MFA2}),
+    %% 			    io:nl()
+    %% 		       end;
+    %% 		_ ->
+    %% 		    ok
 		   
-	    end;
-	_-> ok
+    %% 	    end;
+    %% 	_-> ok
+    %% end,
+    %% paradox_check().
+    receive
+	{PID,IO,SID,MFA,Time} ->
+	    io:write(F,{IO,SID,MFA,timer:now_diff(Time,T)})
     end,
-    paradox_check().
+    paradox_check(F,T).
 
 start(Fun,FolderName,CoreN,Flags)->
     create_folder(FolderName),
@@ -30,7 +35,9 @@ start(Fun,FolderName,CoreN,Flags)->
     io:write(FP,lists:member(gc,Flags)),
     io:put_chars(FP,"."),			 
     file:close(FP),
-    PC = spawn(?MODULE,paradox_check,[]),
+    {ok,F} = file:open(trace,[write]),
+    PC = spawn(?MODULE,paradox_check,[F,erlang:now()]),
+
     PIDapply = spawn(?MODULE,wait_apply,[Fun]),    
     PIDs = lists:map(fun(X)-> spawn(pcore,start_tracer,[FolderName,X,Flags,erlang:now()]) end, lists:seq(1,CoreN)),
     PID = spawn(?MODULE,master_tracer,[array:fix(array:from_list(PIDs)),PC]),
@@ -137,7 +144,7 @@ master_tracer(PIDs,PC)->
 		    master_tracer(PIDs,PC);
 		_ ->
 		    array:get(SID-1,PIDs)!{PID,IO,MFA,Time},  %0-indexed arrays
-		    PC!{PID,IO,SID,MFA},
+		    PC!{PID,IO,SID,MFA,Time},
 		    master_tracer(PIDs,PC)
 	    end;
 	{trace_ts,PID,SE,_GC_Info,Time} ->

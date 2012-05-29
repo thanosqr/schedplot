@@ -236,9 +236,17 @@ insert(Out,Val)->
 	    Out#out{data=[Val|Out#out.data],size=Size+1}
     end.
 
+
+
 save(Out)->
 %    io:write(Out#out.data),
     dets:insert(Out#out.file,{{Out#out.coreID, Out#out.zoom, Out#out.key},Out#out.timestart,Out#out.data}),
+    
+
+    {ok,SSa}=file:open(poko,[append]),
+    io:write(SSa,{Out#out.coreID, Out#out.zoom,Out#out.key,Out#out.data}),
+    file:close(SSa),
+
     Out#out{data=[],
 	    timestart=Out#out.timestart+?MAX_OUT, 
 	    key=Out#out.key+1,
@@ -253,6 +261,7 @@ close_out(Out)->
 
 open_out(OutName,CoreID)->
     {ok,File}=dets:open_file(OutName,[]),
+    dets:delete_all_objects(File),
     #out{file=File,
 	     zoom=0,
 	     coreID=CoreID,
