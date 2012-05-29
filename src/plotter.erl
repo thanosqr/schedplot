@@ -79,15 +79,18 @@ create_labels(Frame,N)->
 
 
 label_portray(N)->
-	if N < 1000 ->
-			form(N,N,"us");
-	   N < 1000000 ->
-			form(N div 1000,N/1000, "ms");
-	   N < 60000000 ->
-			form(N div 1000000, N/1000000, "s");
-	   true ->
-			form(N div 60000000, N/60000000, "m")
-	end.
+    if N==0 ->
+	    form(0,0,"");
+
+       N < 1000 ->
+	    form(N,N,"us");
+       N < 1000000 ->
+	    form(N div 1000,N/1000, "ms");
+       N < 60000000 ->
+	    form(N div 1000000, N/1000000, "s");
+       true ->
+	    form(N div 60000000, N/60000000, "m")
+    end.
 
 form(A,B,U)->
 	AL = integer_to_list(A),
