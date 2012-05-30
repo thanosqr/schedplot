@@ -20,7 +20,7 @@ paradox_check(F,T)->
     %% end,
     %% paradox_check().
     receive
-	{PID,IO,SID,MFA,Time} ->
+	{_PID,IO,SID,MFA,Time} ->
 	    io:write(F,{IO,SID,MFA,timer:now_diff(Time,T)})
     end,
     paradox_check(F,T).
@@ -38,7 +38,12 @@ start(Fun,FolderName,CoreN,Flags)->
     {ok,F} = file:open(trace,[write]),
     PC = spawn(?MODULE,paradox_check,[F,erlang:now()]),
 
-    PIDapply = spawn(?MODULE,wait_apply,[Fun]),    
+    PIDapplyT = spawn(?MODULE,wait_apply,[Fun]),    
+	case lists:member(trace_tracer,Flags) of
+		true -> PIDapply = PIDapplyT;
+		false -> PIDapply = all
+	end,
+												 
     PIDs = lists:map(fun(X)-> spawn(pcore,start_tracer,[FolderName,X,Flags,erlang:now()]) end, lists:seq(1,CoreN)),
     PID = spawn(?MODULE,master_tracer,[array:fix(array:from_list(PIDs)),PC]),
     register(master_tracer,PID),
@@ -56,7 +61,7 @@ start(Fun,FolderName,CoreN,Flags)->
 				     {tracer,PID}])
 	end,
 
-    PIDapply!{start,self()},
+    PIDapplyT!{start,self()},
     receive
 	apply_done->ok
     end,
@@ -94,10 +99,10 @@ stop(PID)->
 % also, the implementation might change in the future 
 % ie using dets or other nodes (hence the wrappers)
 
-start_tracer(FolderName,N,_Flags,Now)->
+start_tracer(FolderName,N,Flags,Now)->
     P=lists:concat([atom_to_list(FolderName),"/trace_gabi",integer_to_list(N)]),
     F=lists:concat([atom_to_list(FolderName),"/trace_famdict",integer_to_list(N)]),
-    Pabi=pabi:open(P,F,Now),
+    Pabi=pabi:open(P,F,Now,Flags),
     ?MODULE:tracer(Pabi,null).
 
 

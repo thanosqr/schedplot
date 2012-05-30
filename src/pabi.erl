@@ -23,10 +23,16 @@
 %% MFALib = [{F,A,[M]}]
 
 
-open(NameData,NameFamdict,PrevTime)->
+open(NameData,NameFamdict,PrevTime,Flags)->
     {ok,S}=file:open(NameData,[write,raw,compressed]),
+	case lists:member(trace_mfa,Flags) of
+		true ->
+			Famdict = famdict:new(NameFamdict);
+		false ->
+			Famdict = 42
+	end,
     #pabi{file=S,
-	  famdict=famdict:new(NameFamdict),
+	  famdict=Famdict,
 	  data=[],
 	  prevtime=PrevTime}.
 
@@ -83,16 +89,28 @@ store(S)->
 %%     B=term_to_binary({P1,P2}),
 %%     {B,F,P}.
 encode({PID,in,MFAin,TimeIn},{PID,out,MFAout,TimeOut},Famdict,PrevTime)->
+	case Famdict of
+		42 -> 
+			Fo = 0,
+			Fm = 0,
+			MFAbytes = <<0:8>>,
+			PIDbytes = <<0:16>>,
+			NFamdict = 42
+			;
+		_ ->
+			PIDbytes = pid_encode(PID),			
+			{MFAbytes,NFamdict,Fo,Fm} = mfa_encode(MFAin,MFAout,Famdict)
+	end,
     {NPrevTime,TimeBytes} = time_encode(TimeIn,PrevTime),
-    PIDbytes = pid_encode(PID),
-    {MFAbytes,NFamdict,Fo,Fm} = mfa_encode(MFAin,MFAout,Famdict),
     DurationBytes = duration_encode(TimeOut,TimeIn,Fo,Fm),
     {[DurationBytes,TimeBytes,PIDbytes,MFAbytes],NFamdict,NPrevTime};
+
 encode({_PID1,in,_MFA1,_T1},{_PID2,out,_MFA2,_T2},F,P) ->
     %% io:write('#--diff PID error--'),
     %% io:write({PID1,MFA1,PID2,MFA2,timediff(T2,T1)}),
     %% io:nl(),
     {<<0:8>>,F,P}.
+
 
 pid_encode(PID)->
     BID=term_to_binary(PID),

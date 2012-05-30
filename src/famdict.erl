@@ -92,6 +92,7 @@ mlookup(M,[M|_],N)->
 mlookup(M,[_|Ms],N) ->
     mlookup(M,Ms,N-1).
     
+close(42)->ok;
 close(D)->
     save([D#famdict.current|D#famdict.old],D#famdict.file),
     file:close(D#famdict.file).
