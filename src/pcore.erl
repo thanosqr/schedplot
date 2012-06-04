@@ -40,8 +40,8 @@ start(Fun,FolderName,CoreN,Flags)->
 
     PIDapplyT = spawn(?MODULE,wait_apply,[Fun]),    
 	case lists:member(trace_tracer,Flags) of
-		true -> PIDapply = PIDapplyT;
-		false -> PIDapply = all
+		false -> PIDapply = PIDapplyT;
+		true -> PIDapply = all
 	end,
 												 
     PIDs = lists:map(fun(X)-> spawn(pcore,start_tracer,[FolderName,X,Flags,erlang:now()]) end, lists:seq(1,CoreN)),
