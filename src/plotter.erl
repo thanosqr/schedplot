@@ -58,7 +58,7 @@ drawCoreLines(Paint,[CL|CLs],Y,[SL|SLs])->
     drawCoreLines(Paint,CLs,Y+42,SLs).
 
 drawGrid(Paint,{ZOffset,XOffset},{ZoomLvl,XPos},Labels)->
-	ZoomFactor = round(math:pow(2,ZoomLvl+ZOffset)),
+	ZoomFactor = round(math:pow(2,ZoomLvl+ZOffset+?DEF_GU)),
 	Width=1000,
 	AbsOffset = XOffset+XPos-?DETS_PACK_SIZE,
 	Offset=AbsOffset rem ?VERTICAL_INT,
@@ -68,7 +68,8 @@ drawGrid(Paint,{ZOffset,XOffset},{ZoomLvl,XPos},Labels)->
 			  end,lists:seq(Width-Offset+?VERTICAL_INT,-Offset,-?VERTICAL_INT)),
 	lists:map(fun({L,X,N})->
 					  wxWindow:move(L,X-20+42,810),
-					  wxStaticText:setLabel(L,
+io:write({l,{AbsOffset,?VERTICAL_INT,N,ZoomFactor}}),io:nl(),
+					  wxStaticText:setLabel(L, %%wat
 						label_portray(((AbsOffset div ?VERTICAL_INT)+N)*ZoomFactor))			  end, qutils:zip3(Labels,lists:seq(Width-Offset,-Offset,-?VERTICAL_INT))),
 	wxDC:setPen(Paint,?MGrey).
 

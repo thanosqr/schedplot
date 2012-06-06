@@ -5,14 +5,14 @@
 %% obviously this byte cannot be 0 so we use it to denote that the following packets belong to the next scheduler
 %% if we read two 0 bytes that means that this was the last scheduler and the following packets belong to the first scheduler
 
-%% normally one byte is used for the time difference but it same cases more bytes may be required
+%% normally one byte is used for the time difference but in some cases more bytes may be required
 %% benchmarks should be done to determine the optimum default number
 
 -module(pabi).
 -compile(export_all).
 -include("hijap.hrl").
 %-exports([open/1,store/2,close/1,add/4]).
--define(MAX_SIZE,inf).
+-define(MAX_SIZE,10000).
 -record(pabi,{file,
 	      famdict,
 	      data,
@@ -39,7 +39,7 @@ open(NameData,NameFamdict,PrevTime,Flags)->
 
 close(S)->
     SN=store(S),
-    famdict:close(S#pabi.famdict),
+    famdict:close(SN#pabi.famdict),
     file:close(SN#pabi.file).
 
 add(Pack1,Pack2,S)->

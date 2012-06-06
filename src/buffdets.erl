@@ -104,7 +104,7 @@ create_buffer(Tab,BufferXsize,BufferZsize,CoreN,Panel,Frame,Max_Zoom,Labels,Widt
 							 left_data=0,
 							 right_data=Xs*Xs,
 							 zoomin_data=Zs*Zs,
-							 zoomout_data=0,
+							 zoomout_data=2,
 							 pos={1+(BufferZsize div 2),
 								  (1+(BufferXsize div 2))*?DETS_PACK_SIZE},
 							 labels=Labels,
@@ -119,10 +119,11 @@ refresh_buffer({Zadj,Xadj},Old)->
 	{Z,X} = Old#buffdets.pos,
 	ZoomStart = Zoffset+Zadj,
 	ZoomEnd = ZoomStart+BufferZsize,
-	XStart = Xoffset+Xadj,
-	XEnd = XStart+BufferXsize*?DETS_PACK_SIZE,
+	XStart = (Xoffset+Xadj) div ?DETS_PACK_SIZE,
+	XEnd = XStart+BufferXsize,
 	Data = get_from_dets(ZoomStart,ZoomEnd,XStart,XEnd,
 						 CoreN,Old#buffdets.tab),
+io:write({'--------------',X-Xadj,Z-Zadj}),
 	Old#buffdets{data=Data,
 				 lz=2,
 				 uz=BufferZsize-1,
@@ -140,7 +141,7 @@ get_from_dets(ZoomStart,ZoomEnd,XStart,XEnd,CoreN,Tab)->
 					[[Values]] ->Values;
 					[] ->[]
 				end
-			  end, lists:seq(XStart,XEnd,?DETS_PACK_SIZE))
+			  end, lists:seq(XStart,XEnd))
 			end,lists:seq(1,CoreN))
 		  end,lists:seq(ZoomStart,ZoomEnd)).
 			  

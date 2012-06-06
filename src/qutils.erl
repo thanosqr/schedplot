@@ -43,3 +43,12 @@ zip3(A,B)->
 	  lists:sublist(B,length(A)),
 	  lists:seq(min(length(A),length(B))-1,0,-1)
 	 ).
+
+reregister(Name,PID)->
+	case lists:member(Name,erlang:registered()) of
+		true->
+			unregister(Name);
+		false ->
+			ok
+	end,
+	register(Name,PID).

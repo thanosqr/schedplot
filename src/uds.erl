@@ -48,6 +48,7 @@ init(FolderName)->
 
 draw(Datapack)->
     {Values,NDatapack} = buffdets:read(Datapack),
+
     Paint = wxBufferedPaintDC:new(Datapack#buffdets.panel),
     wxDC:clear(Paint),
 	plotter:drawGrid(Paint,NDatapack#buffdets.offset,
@@ -139,5 +140,5 @@ change_state(How,Datapack)->
 
 update_zoom_label({Z,_},{ZOffset,_},Label)->
 	wxStaticText:setLabel(Label,
-	  lists:concat(["Zoom: 1/", 
+	  lists:concat(["Zoom 1:", 
 					integer_to_list(round(math:pow(2,Z+ZOffset)))])).

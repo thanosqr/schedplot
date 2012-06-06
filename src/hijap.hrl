@@ -11,6 +11,9 @@
 -define(MAX_TIME,255).
 -define(ANY,?wxID_ANY).
 
+-define(DEF_GU,3).
+-define(GU,8).
+% GU = math:pow(2,DEF_GU) but used in guards
 -record(buffdets, {data,
 				   tab,
 				   pos,

@@ -2,28 +2,6 @@
 -compile(export_all).
 -include("hijap.hrl").
 
-paradox_check(F,T)->
-    %%  receive
-    %% 	{PID1,in,SID1,MFA1} ->
-    %% 	    receive
-    %% 		{PID2,in,SID2,MFA2} ->
-    %% 		    if SID1 == SID2 -> ok;
-    %% 		       SID1=/= SID2 ->
-    %% 			    io:write({PID1,PID2,SID1,SID2,MFA1,MFA2}),
-    %% 			    io:nl()
-    %% 		       end;
-    %% 		_ ->
-    %% 		    ok
-		   
-    %% 	    end;
-    %% 	_-> ok
-    %% end,
-    %% paradox_check().
-    receive
-	{_PID,IO,SID,MFA,Time} ->
-	    io:write(F,{IO,SID,MFA,timer:now_diff(Time,T)})
-    end,
-    paradox_check(F,T).
 
 start(Fun,FolderName,CoreN,Flags)->
     create_folder(FolderName),
@@ -35,36 +13,30 @@ start(Fun,FolderName,CoreN,Flags)->
     io:write(FP,lists:member(gc,Flags)),
     io:put_chars(FP,"."),			 
     file:close(FP),
-    {ok,F} = file:open(trace,[write]),
-    PC = spawn(?MODULE,paradox_check,[F,erlang:now()]),
-
+	T0 = erlang:now(),
+	scarlet:init(FolderName,T0),
     PIDapplyT = spawn(?MODULE,wait_apply,[Fun]),    
 	case lists:member(trace_tracer,Flags) of
 		false -> PIDapply = PIDapplyT;
 		true -> PIDapply = all
 	end,
-												 
-    PIDs = lists:map(fun(X)-> spawn(pcore,start_tracer,[FolderName,X,Flags,erlang:now()]) end, lists:seq(1,CoreN)),
-    PID = spawn(?MODULE,master_tracer,[array:fix(array:from_list(PIDs)),PC]),
-    register(master_tracer,PID),
-    case lists:member(gc,Flags) of
-	false ->
-	    erlang:trace(PIDapply,true,[running,
-				      scheduler_id,
-				      timestamp,
-				      {tracer,PID}]);
-	true ->
-	    erlang:trace(PIDapply,true,[running,
-				     garbage_collection,
-				     scheduler_id,
-				     timestamp,
-				     {tracer,PID}])
-	end,
 
+    PIDs = lists:map(fun(X)-> spawn(pcore,start_tracer,[FolderName,X,Flags,T0]) end, lists:seq(1,CoreN)),
+    PID = spawn(?MODULE,master_tracer,[array:fix(array:from_list(PIDs))]),
+    qutils:reregister(master_tracer,PID),
+	TFlags = [running,scheduler_id,timestamp,{tracer,PID}],
+	case lists:member(gc,Flags) of
+		false ->
+			erlang:trace(PIDapply,true,TFlags);
+		true ->
+			erlang:trace(PIDapply,true,[garbage_collection|TFlags])
+	end,
+	Agda=erlang:now(),
     PIDapplyT!{start,self()},
     receive
-	apply_done->ok
+		apply_done->ok
     end,
+io:write(timer:now_diff(erlang:now(),Agda)/1000000),
     case lists:member(no_auto_stop,Flags) of
 		true  -> ok;
 		false -> stop()
@@ -87,9 +59,17 @@ wait_apply(Fun)->
 stop()->
     stop(all).
 stop(PID)->
-	erlang:trace_delivered(PID),
-	erlang:trace(all,false,[]),
+A=erlang:now(),
+	Ref=erlang:trace_delivered(PID),
+	receive 
+		{trace_delivered, all, Ref}->
+			ok
+	end,
+io:write({t,timer:now_diff(erlang:now(),A)}),io:nl(),
+	erlang:trace(all,false,[all]),
+io:write(erlang:trace_info(self(),flags)),
     master_tracer!{self(),exit},
+	scarlet:close(),
 	receive
 		trace_stored->ok
 	end.
@@ -108,8 +88,6 @@ start_tracer(FolderName,N,Flags,Now)->
 
 tracer(Pabi,Prev)->
     receive
-		exit->
-			pabi:close(Pabi);
 		{PID,IO,MFA,Time}->
 			P2 = {PID,IO,MFA,Time},
 			case IO of
@@ -127,43 +105,72 @@ tracer(Pabi,Prev)->
 					end
 			end,
 			tracer(NPabi,NPrev);
-		PID ->
+		{exit,PID} ->
+			c:flush(),
 			pabi:close(Pabi),
 			PID!ok
     end.
 
-
-master_tracer(PIDs,PC)->
-
+%io:wait_io_mon_reply/2 appears to only enter 
+%the schedulers (and never leave)
+%possibly a problem with trace&io;  we ignore those messages
+master_tracer(PIDs)->
     receive
-	{PID,exit}->
-	    lists:map(fun(P)->P!self() end,array:to_list(PIDs)),
-	    lists:map(fun(_)->receive ok -> ok end end, array:to_list(PIDs)),
-	    PID!trace_stored;
-	{trace_ts,PID,IO,SID,MFA,Time} ->
-	    case MFA of
-		{io,wait_io_mon_reply,2} ->
-  % io:wait_io_mon_reply/2 appears to only enter the schedulers (and never leave)
-  % possibly a problem with trace&io;  we ignore those messages
-  %io:write('-----------iomon error'),io:nl(),
-		    master_tracer(PIDs,PC);
-		_ ->
-		    array:get(SID-1,PIDs)!{PID,IO,MFA,Time},  %0-indexed arrays
-		    PC!{PID,IO,SID,MFA,Time},
-		    master_tracer(PIDs,PC)
-	    end;
-	{trace_ts,PID,SE,_GC_Info,Time} ->
-	    case SE of
-		gc_start->
-		    Msg = {PID,in,{gc,gc,0},Time};
-		gc_end ->
-		    Msg = {PID,out,{gc,gc,0},Time}
-	    end,
-	    array:get(array:size(PIDs)-1,PIDs)!Msg,
-	    master_tracer(PIDs,PC)
-	end.
+		{trace_ts,PID,IO,SID,MFA,Time} ->
+			case MFA of
+				{io,wait_io_mon_reply,2} ->
+					master_tracer(PIDs);
+				_ ->
+					array:get(SID-1,PIDs)!{PID,IO,MFA,Time},  %0-indexed arrays
+					master_tracer(PIDs)
+			end;
+		{trace_ts,PID,SE,_GC_Info,Time} ->
+			case SE of
+				gc_start->
+					Msg = {PID,in,{gc,gc,0},Time};
+				gc_end ->
+					Msg = {PID,out,{gc,gc,0},Time}
+			end,
+			array:get(array:size(PIDs)-1,PIDs)!Msg,
+			master_tracer(PIDs);
+		{PID,exit}->
+
+			[{_,NMQ}]=			erlang:process_info(self(),[message_queue_len]),
+			io:write({nmq,NMQ}),io:nl(),
+			fwd_rest(PIDs),
+			lists:map(fun(P)->P!{exit,self()} end,array:to_list(PIDs)),
+			lists:map(fun(_)->receive ok -> ok end end, array:to_list(PIDs)),
+			PID!trace_stored
+		end.
 				
-		   
+	
+fwd_rest(PIDs)->	   
+	%% [{_,NMQ}]=			erlang:process_info(self(),[message_queue_len]),
+	%% if NMQ rem 1000 == 0 ->
+	%% 		io:write(NMQ),io:nl();
+	%%    true -> ok
+	%% end,
+	receive
+		{trace_ts,PID,IO,SID,MFA,Time} ->
+			case MFA of
+				{io,wait_io_mon_reply,2} ->
+					fwd_rest(PIDs);
+				_ ->
+					array:get(SID-1,PIDs)!{PID,IO,MFA,Time},  %0-indexed arrays
+					fwd_rest(PIDs)
+			end;
+		{trace_ts,PID,SE,_GC_Info,Time} ->
+			case SE of
+				gc_start->
+					Msg = {PID,in,{gc,gc,0},Time};
+				gc_end ->
+					Msg = {PID,out,{gc,gc,0},Time}
+			end,
+			array:get(array:size(PIDs)-1,PIDs)!Msg,
+			fwd_rest(PIDs)
+	after 10*1000 ->
+			ok
+	end.
 
 
 create_folder(FolderName)->

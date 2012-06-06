@@ -37,3 +37,12 @@ start(Fun)->
 
  
 	
+list(X)->
+	start({lists,seq,[1,X*1000*100]},[trace_tracer]).
+
+t()->
+	{ok,S} = dets:open_file("qijap_profile/analyzed_trace"),
+	S.
+
+r(S,X)->
+	lists:reverse(lists:sort(dets:match(S,{{X,0,'$1'},'$2','_'}))).
