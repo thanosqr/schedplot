@@ -27,8 +27,8 @@
 get_packet(Bytes)->
     case get_byte(Bytes) of
 		end_of_file ->
-			io:write(normal_end),io:nl()x,
-			endx_of_file;
+			io:write(normal_end),io:nl(),
+			end_of_file;
 		{Duration1,Bytes2}->
 			case get_duration(Duration1,Bytes2) of
 				{Duration,Fo,Fm,Bytes3}->

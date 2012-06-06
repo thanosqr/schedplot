@@ -40,6 +40,9 @@ start(Fun)->
 list(X)->
 	start({lists,seq,[1,X*1000*100]},[trace_tracer]).
 
+nlist(X)->
+	start({lists,seq,[1,X*1000*100]}).
+
 t()->
 	{ok,S} = dets:open_file("qijap_profile/analyzed_trace"),
 	S.

@@ -15,6 +15,7 @@ start(Fun,FolderName,CoreN,Flags)->
     file:close(FP),
 	T0 = erlang:now(),
 	scarlet:init(FolderName,T0),
+io:write({t0,T0}),io:nl(),
     PIDapplyT = spawn(?MODULE,wait_apply,[Fun]),    
 	case lists:member(trace_tracer,Flags) of
 		false -> PIDapply = PIDapplyT;
@@ -22,7 +23,7 @@ start(Fun,FolderName,CoreN,Flags)->
 	end,
 
     PIDs = lists:map(fun(X)-> spawn(pcore,start_tracer,[FolderName,X,Flags,T0]) end, lists:seq(1,CoreN)),
-    PID = spawn(?MODULE,master_tracer,[array:fix(array:from_list(PIDs))]),
+    PID = spawn(?MODULE,master_tracer,[array:fix(array:from_list(PIDs)),0]),
     qutils:reregister(master_tracer,PID),
 	TFlags = [running,scheduler_id,timestamp,{tracer,PID}],
 	case lists:member(gc,Flags) of
@@ -114,16 +115,16 @@ tracer(Pabi,Prev)->
 %io:wait_io_mon_reply/2 appears to only enter 
 %the schedulers (and never leave)
 %possibly a problem with trace&io;  we ignore those messages
-master_tracer(PIDs)->
+master_tracer(PIDs,LTime)->
     receive
 		{trace_ts,PID,IO,SID,MFA,Time} ->
 			case MFA of
 				{io,wait_io_mon_reply,2} ->
-					master_tracer(PIDs);
+					ok;
 				_ ->
-					array:get(SID-1,PIDs)!{PID,IO,MFA,Time},  %0-indexed arrays
-					master_tracer(PIDs)
-			end;
+					array:get(SID-1,PIDs)!{PID,IO,MFA,Time}  %0-indexed arrays
+			end,
+			master_tracer(PIDs,Time);
 		{trace_ts,PID,SE,_GC_Info,Time} ->
 			case SE of
 				gc_start->
@@ -132,9 +133,9 @@ master_tracer(PIDs)->
 					Msg = {PID,out,{gc,gc,0},Time}
 			end,
 			array:get(array:size(PIDs)-1,PIDs)!Msg,
-			master_tracer(PIDs);
+			master_tracer(PIDs,Time);
 		{PID,exit}->
-
+io:write({lt,LTime}),
 			[{_,NMQ}]=			erlang:process_info(self(),[message_queue_len]),
 			io:write({nmq,NMQ}),io:nl(),
 			fwd_rest(PIDs),

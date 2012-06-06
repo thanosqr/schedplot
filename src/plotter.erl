@@ -58,19 +58,20 @@ drawCoreLines(Paint,[CL|CLs],Y,[SL|SLs])->
     drawCoreLines(Paint,CLs,Y+42,SLs).
 
 drawGrid(Paint,{ZOffset,XOffset},{ZoomLvl,XPos},Labels)->
-	ZoomFactor = round(math:pow(2,ZoomLvl+ZOffset+?DEF_GU)),
+	ZoomFactor = round(math:pow(2,ZoomLvl+ZOffset+?DEF_GU-1)),
 	Width=1000,
 	AbsOffset = XOffset+XPos-?DETS_PACK_SIZE,
+
 	Offset=AbsOffset rem ?VERTICAL_INT,
 	wxDC:setPen(Paint,?LGrey),
 	lists:map(fun(X)->
 					  wxDC:drawLine(Paint,{X,0},{X,800})
 			  end,lists:seq(Width-Offset+?VERTICAL_INT,-Offset,-?VERTICAL_INT)),
 	lists:map(fun({L,X,N})->
+io:write({o,N,AbsOffset,ZoomFactor}),
 					  wxWindow:move(L,X-20+42,810),
-io:write({l,{AbsOffset,?VERTICAL_INT,N,ZoomFactor}}),io:nl(),
 					  wxStaticText:setLabel(L, %%wat
-						label_portray(((AbsOffset div ?VERTICAL_INT)+N)*ZoomFactor))			  end, qutils:zip3(Labels,lists:seq(Width-Offset,-Offset,-?VERTICAL_INT))),
+						label_portray(((AbsOffset div ?VERTICAL_INT)+N)*?VERTICAL_INT*ZoomFactor))			  end, qutils:zip3(Labels,lists:seq(Width-Offset,-Offset,-?VERTICAL_INT))),
 	wxDC:setPen(Paint,?MGrey).
 
 create_labels(Frame,N)->
@@ -80,6 +81,7 @@ create_labels(Frame,N)->
 
 
 label_portray(N)->
+io:write(N),io:nl(),
     if N==0 ->
 	    form(0,0,"");
 
