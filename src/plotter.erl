@@ -8,6 +8,7 @@
 -define(MGrey,?wxMEDIUM_GREY_PEN).
 -define(Grey,?wxGREY_PEN).
 
+-define(DEF_C,?MGrey).
 
 clear_canvas(Panel)->
     Paint = wxBufferedPaintDC:new(Panel),
@@ -46,7 +47,7 @@ drawCoreLine(Paint,Lengths,Yo)->
 wxDC:setPen(Paint,?Grey),
     wxDC:drawLine(Paint,{0,Yo},{1000,Yo}),
     wxDC:drawLine(Paint,{0,Yo-?MAX_HEIGHT},{1000,Yo-?MAX_HEIGHT}),
-wxDC:setPen(Paint,?MGrey),
+wxDC:setPen(Paint,?DEF_C),
     drawLines(Paint,Lengths,0,Yo).
 
 drawCoreLines(Paint,CLs,SLs)->
@@ -68,11 +69,10 @@ drawGrid(Paint,{ZOffset,XOffset},{ZoomLvl,XPos},Labels)->
 					  wxDC:drawLine(Paint,{X,0},{X,800})
 			  end,lists:seq(Width-Offset+?VERTICAL_INT,-Offset,-?VERTICAL_INT)),
 	lists:map(fun({L,X,N})->
-io:write({o,N,AbsOffset,ZoomFactor}),
 					  wxWindow:move(L,X-20+42,810),
-					  wxStaticText:setLabel(L, %%wat
-						label_portray(((AbsOffset div ?VERTICAL_INT)+N)*?VERTICAL_INT*ZoomFactor))			  end, qutils:zip3(Labels,lists:seq(Width-Offset,-Offset,-?VERTICAL_INT))),
-	wxDC:setPen(Paint,?MGrey).
+					  wxStaticText:setLabel(L,label_portray(((AbsOffset div ?VERTICAL_INT)+N)*?VERTICAL_INT*ZoomFactor))
+			  end, qutils:zip3(Labels,lists:seq(Width-Offset,-Offset,-?VERTICAL_INT))),
+	wxDC:setPen(Paint,?DEF_C).
 
 create_labels(Frame,N)->
 	lists:map(fun(_)->

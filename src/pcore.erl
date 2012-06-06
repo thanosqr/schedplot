@@ -169,7 +169,7 @@ fwd_rest(PIDs)->
 			end,
 			array:get(array:size(PIDs)-1,PIDs)!Msg,
 			fwd_rest(PIDs)
-	after 10*1000 ->
+	after 420 ->
 			ok
 	end.
 

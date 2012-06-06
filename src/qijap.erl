@@ -35,8 +35,10 @@ start(Fun,FolderName) ->
 start(Fun)->
 	start(Fun,?DEFAULT_FOLDER_NAME,[]).
 
- 
-	
+%%--------------------------------------------------------------%%	
+%%---------------------------- testing -------------------------%%
+%%--------------------------------------------------------------%%	
+
 list(X)->
 	start({lists,seq,[1,X*1000*100]},[trace_tracer]).
 
@@ -49,3 +51,11 @@ t()->
 
 r(S,X)->
 	lists:reverse(lists:sort(dets:match(S,{{X,0,'$1'},'$2','_'}))).
+
+seq(X)->
+	start({?MODULE,derp,[X*1000000]}).
+
+derp(0)->
+	ok;
+derp(X)->
+	derp(X-1).
