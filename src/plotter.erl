@@ -81,7 +81,6 @@ create_labels(Frame,N)->
 
 
 label_portray(N)->
-io:write(N),io:nl(),
     if N==0 ->
 	    form(0,0,"");
 

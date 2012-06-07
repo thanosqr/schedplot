@@ -25,7 +25,6 @@ loop(PDS)->
 	{update,NPDS}->
 	    loop(NPDS#pds{offset=PDS#pds.offset-?DETS_PACK_SIZE});
 	WxEvent->
-io:write(o),
 	    NPDS=change_state(WxEvent,PDS),
 	    loop(NPDS)
     end.
@@ -34,7 +33,6 @@ io:write(o),
 change_state(How,PDS)->
     case How of
 	?LEFT->
-	    io:write(l),
 	    pds:move(PDS,-?STEP);
 	?RIGHT->
 	    pds:move(PDS,?STEP);
@@ -56,8 +54,6 @@ init(Filename)->
     wxFrame:show(Frame),  
 timer:sleep(420),
     PDS=pds:new(Tab,1,CoreN,Max_Zoom,Max_Zoom,Frame),
-
-io:write(lala),
     loop(PDS).
 
 

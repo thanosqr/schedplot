@@ -104,7 +104,6 @@ insert_node(Fout,SID,S,?MAX)->
     store(Fout,SID,S),
     insert_node(Fout,SID,[],1);
 insert_node(Fout,SID,S,N)->
-io:write({SID,S}),io:nl(),
     receive
 	{exit,PID}->
 	    store(Fout,SID,S),

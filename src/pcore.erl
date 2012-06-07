@@ -13,9 +13,8 @@ start(Fun,FolderName,CoreN,Flags)->
     io:write(FP,lists:member(gc,Flags)),
     io:put_chars(FP,"."),			 
     file:close(FP),
-	T0 = erlang:now(),
-	scarlet:init(FolderName,T0),
-io:write({t0,T0}),io:nl(),
+    T0 = erlang:now(),
+%	scarlet:init(FolderName,T0),
     PIDapplyT = spawn(?MODULE,wait_apply,[Fun]),    
 	case lists:member(trace_tracer,Flags) of
 		false -> PIDapply = PIDapplyT;
@@ -37,7 +36,6 @@ io:write({t0,T0}),io:nl(),
     receive
 		apply_done->ok
     end,
-io:write(timer:now_diff(erlang:now(),Agda)/1000000),
     case lists:member(no_auto_stop,Flags) of
 		true  -> ok;
 		false -> stop()
@@ -55,28 +53,25 @@ wait_apply(Fun)->
 	    end
     end,
     PID!apply_done.
-	    
+
 
 stop()->
     stop(all).
 stop(PID)->
-A=erlang:now(),
-	Ref=erlang:trace_delivered(PID),
-	receive 
-		{trace_delivered, all, Ref}->
-			ok
-	end,
-io:write({t,timer:now_diff(erlang:now(),A)}),io:nl(),
-	erlang:trace(all,false,[all]),
-io:write(erlang:trace_info(self(),flags)),
+    Ref=erlang:trace_delivered(PID),
+    receive 
+	{trace_delivered, all, Ref}->
+	    ok
+    end,
+    erlang:trace(all,false,[all]),
     master_tracer!{self(),exit},
-	scarlet:close(),
-	receive
-		trace_stored->ok
-	end.
+						%	scarlet:close(),
+    receive
+	trace_stored->ok
+    end.
 
-% we manually implement delayed write since it appears to be faster 
-% than delayed write performed with the default flag.
+						% we manually implement delayed write since it appears to be faster 
+						% than delayed write performed with the default flag.
 % also, the implementation might change in the future 
 % ie using dets or other nodes (hence the wrappers)
 
@@ -135,9 +130,7 @@ master_tracer(PIDs,LTime)->
 			array:get(array:size(PIDs)-1,PIDs)!Msg,
 			master_tracer(PIDs,Time);
 		{PID,exit}->
-io:write({lt,LTime}),
 			[{_,NMQ}]=			erlang:process_info(self(),[message_queue_len]),
-			io:write({nmq,NMQ}),io:nl(),
 			fwd_rest(PIDs),
 			lists:map(fun(P)->P!{exit,self()} end,array:to_list(PIDs)),
 			lists:map(fun(_)->receive ok -> ok end end, array:to_list(PIDs)),
