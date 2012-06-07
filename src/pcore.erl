@@ -31,7 +31,6 @@ start(Fun,FolderName,CoreN,Flags)->
 		true ->
 			erlang:trace(PIDapply,true,[garbage_collection|TFlags])
 	end,
-	Agda=erlang:now(),
     PIDapplyT!{start,self()},
     receive
 		apply_done->ok
@@ -110,32 +109,31 @@ tracer(Pabi,Prev)->
 %io:wait_io_mon_reply/2 appears to only enter 
 %the schedulers (and never leave)
 %possibly a problem with trace&io;  we ignore those messages
-master_tracer(PIDs,LTime)->
+master_tracer(PIDs,_LTime)->
     receive
-		{trace_ts,PID,IO,SID,MFA,Time} ->
-			case MFA of
-				{io,wait_io_mon_reply,2} ->
-					ok;
-				_ ->
-					array:get(SID-1,PIDs)!{PID,IO,MFA,Time}  %0-indexed arrays
-			end,
-			master_tracer(PIDs,Time);
-		{trace_ts,PID,SE,_GC_Info,Time} ->
-			case SE of
-				gc_start->
-					Msg = {PID,in,{gc,gc,0},Time};
-				gc_end ->
-					Msg = {PID,out,{gc,gc,0},Time}
-			end,
-			array:get(array:size(PIDs)-1,PIDs)!Msg,
-			master_tracer(PIDs,Time);
-		{PID,exit}->
-			[{_,NMQ}]=			erlang:process_info(self(),[message_queue_len]),
-			fwd_rest(PIDs),
-			lists:map(fun(P)->P!{exit,self()} end,array:to_list(PIDs)),
-			lists:map(fun(_)->receive ok -> ok end end, array:to_list(PIDs)),
-			PID!trace_stored
-		end.
+	{trace_ts,PID,IO,SID,MFA,Time} ->
+	    case MFA of
+		{io,wait_io_mon_reply,2} ->
+		    ok;
+		_ ->
+		    array:get(SID-1,PIDs)!{PID,IO,MFA,Time}  %0-indexed arrays
+	    end,
+	    master_tracer(PIDs,Time);
+	{trace_ts,PID,SE,_GC_Info,Time} ->
+	    case SE of
+		gc_start->
+		    Msg = {PID,in,{gc,gc,0},Time};
+		gc_end ->
+		    Msg = {PID,out,{gc,gc,0},Time}
+	    end,
+	    array:get(array:size(PIDs)-1,PIDs)!Msg,
+	    master_tracer(PIDs,Time);
+	{PID,exit}->
+	    fwd_rest(PIDs),
+	    lists:map(fun(P)->P!{exit,self()} end,array:to_list(PIDs)),
+	    lists:map(fun(_)->receive ok -> ok end end, array:to_list(PIDs)),
+	    PID!trace_stored
+    end.
 				
 	
 fwd_rest(PIDs)->	   

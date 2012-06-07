@@ -136,7 +136,7 @@ get_from_dets(ZoomStart,ZoomEnd,XStart,XEnd,CoreN,Tab)->
 		lists:map(fun(Zoom)->
 		   lists:map(fun(CoreID)->
 			 lists:map(fun(X)->
-				case dets:match(Tab,{{CoreID,Zoom,X},'_','$1'}) of
+				case dets:match(Tab,{{CoreID,Zoom,X},'$1'}) of
 					[[Values]] ->Values;
 					[] ->[]
 				end
