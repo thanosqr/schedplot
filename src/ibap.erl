@@ -19,7 +19,7 @@
 	     key=1,
 	     datalength=0}).
 
--define(MAX_OUT,?DETS_PACK_SIZE*?GU).
+-define(MAX_OUT,?DETS_PACK_SIZE).
 -define(READ_N,100000).
 
 
