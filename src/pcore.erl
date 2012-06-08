@@ -14,7 +14,7 @@ start(Fun,FolderName,CoreN,Flags)->
     io:put_chars(FP,"."),			 
     file:close(FP),
     T0 = erlang:now(),
-%	scarlet:init(FolderName,T0),
+    scarlet:init(FolderName,T0),
     PIDapplyT = spawn(?MODULE,wait_apply,[Fun]),    
 	case lists:member(trace_tracer,Flags) of
 		false -> PIDapply = PIDapplyT;
@@ -64,51 +64,63 @@ stop(PID)->
     end,
     erlang:trace(all,false,[all]),
     master_tracer!{self(),exit},
-						%	scarlet:close(),
+    scarlet:close(),
     receive
 	trace_stored->ok
     end.
 
-						% we manually implement delayed write since it appears to be faster 
-						% than delayed write performed with the default flag.
-% also, the implementation might change in the future 
-% ie using dets or other nodes (hence the wrappers)
+%%%% %% we manually implement delayed write since it appears to be faster 
+%%%% %% than delayed write performed with the default flag.
+%%%% %% also, the implementation might change in the future 
+%%%% %% ie using dets or other nodes (hence the wrappers)
 
 start_tracer(FolderName,N,Flags,Now)->
     P=lists:concat([atom_to_list(FolderName),"/trace_gabi",integer_to_list(N)]),
     F=lists:concat([atom_to_list(FolderName),"/trace_famdict",integer_to_list(N)]),
     Pabi=pabi:open(P,F,Now,Flags),
-    ?MODULE:tracer(Pabi,null).
+    ?MODULE:tracer(Pabi,null,{0,0,0}).
 
 
-tracer(Pabi,Prev)->
+tracer(Pabi,Prev,TP)->
     receive
-		{PID,IO,MFA,Time}->
-			P2 = {PID,IO,MFA,Time},
-			case IO of
-				in -> 
-					NPrev = P2,
-					NPabi = Pabi;
-				out ->
-					case Prev of
-						null ->
-							NPrev = Prev,
-							NPabi = Pabi;
-						_ ->
-							NPrev=null,
-							NPabi=pabi:add(Prev,P2,Pabi)
-					end
-			end,
-			tracer(NPabi,NPrev);
-		{exit,PID} ->
-			c:flush(),
-			pabi:close(Pabi),
-			PID!ok
+	{PID,IO,MFA,Time}->
+	    TD = timer:now_diff(Time,TP),
+	    if TD < 0 ->
+		    io:write({1232,TP,Time});
+	       true->ok
+	    end,
+			
+	    P2 = {PID,IO,MFA,Time},
+	    case IO of
+		in -> 
+		    case Prev of 
+			null -> ok;
+			{_,in,_,_}->
+			    io:write('---eeek----'),io:nl()
+		    end,
+		    NPrev = P2,
+		    NPabi = Pabi;
+		out ->
+		    case Prev of
+			null ->
+			    io:write('---iiik----'),io:nl(),
+			    NPrev = null,
+			    NPabi = Pabi;
+			_ ->
+			    NPrev=null,
+			    NPabi=pabi:add(Prev,P2,Pabi)
+		    end
+	    end,
+	    tracer(NPabi,NPrev,Time);
+	{exit,PID} ->
+	    c:flush(),
+	    pabi:close(Pabi),
+	    PID!ok
     end.
 
-%io:wait_io_mon_reply/2 appears to only enter 
-%the schedulers (and never leave)
-%possibly a problem with trace&io;  we ignore those messages
+%%io:wait_io_mon_reply/2 appears to only enter 
+%%the schedulers (and never leave)
+%%possibly a problem with trace&io;  we ignore those messages
 master_tracer(PIDs,_LTime)->
     receive
 	{trace_ts,PID,IO,SID,MFA,Time} ->
@@ -116,7 +128,7 @@ master_tracer(PIDs,_LTime)->
 		{io,wait_io_mon_reply,2} ->
 		    ok;
 		_ ->
-		    array:get(SID-1,PIDs)!{PID,IO,MFA,Time}  %0-indexed arrays
+		    array:get(SID-1,PIDs)!{PID,IO,MFA,Time}  %%0-indexed arrays
 	    end,
 	    master_tracer(PIDs,Time);
 	{trace_ts,PID,SE,_GC_Info,Time} ->
@@ -137,18 +149,18 @@ master_tracer(PIDs,_LTime)->
 				
 	
 fwd_rest(PIDs)->	   
-	%% [{_,NMQ}]=			erlang:process_info(self(),[message_queue_len]),
-	%% if NMQ rem 1000 == 0 ->
-	%% 		io:write(NMQ),io:nl();
-	%%    true -> ok
-	%% end,
+	%%%% [{_,NMQ}]=			erlang:process_info(self(),[message_queue_len]),
+	%%%% if NMQ rem 1000 == 0 ->
+	%%%% 		io:write(NMQ),io:nl();
+	%%%%    true -> ok
+	%%%% end,
 	receive
 		{trace_ts,PID,IO,SID,MFA,Time} ->
 			case MFA of
 				{io,wait_io_mon_reply,2} ->
 					fwd_rest(PIDs);
 				_ ->
-					array:get(SID-1,PIDs)!{PID,IO,MFA,Time},  %0-indexed arrays
+					array:get(SID-1,PIDs)!{PID,IO,MFA,Time},  %%0-indexed arrays
 					fwd_rest(PIDs)
 			end;
 		{trace_ts,PID,SE,_GC_Info,Time} ->

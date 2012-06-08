@@ -11,26 +11,26 @@
 -module(pabi).
 -compile(export_all).
 -include("hijap.hrl").
-%-exports([open/1,store/2,close/1,add/4]).
+%%-exports([open/1,store/2,close/1,add/4]).
 -define(MAX_SIZE,10000).
 -record(pabi,{file,
 	      famdict,
 	      data,
 	      size=0,
 	      prevtime}).
-	  
 
-%% MFALib = [{F,A,[M]}]
+
+%%%% MFALib = [{F,A,[M]}]
 
 
 open(NameData,NameFamdict,PrevTime,Flags)->
     {ok,S}=file:open(NameData,[write,raw,compressed]),
-	case lists:member(trace_mfa,Flags) of
-		true ->
-			Famdict = famdict:new(NameFamdict);
-		false ->
-			Famdict = 42
-	end,
+    case lists:member(trace_mfa,Flags) of
+	true ->
+	    Famdict = famdict:new(NameFamdict);
+	false ->
+	    Famdict = 42
+    end,
     #pabi{file=S,
 	  famdict=Famdict,
 	  data=[],
@@ -53,9 +53,9 @@ add(Pack1,Pack2,S)->
     		       S#pabi.prevtime),
     	    NData = update(Encoded,S#pabi.data),
     	    S#pabi{famdict=NFamdict,
-    		  data=NData,
-    		  size=N+1,
-    		  prevtime=NPrevTime}
+		   data=NData,
+		   size=N+1,
+		   prevtime=NPrevTime}
     end.
 
 
@@ -71,44 +71,50 @@ store(S)->
 	   size=0}.
 
 
-% Common pack ---> 5 bytes
-% TimeIn: 8 bits  --cannot be 0--
-% Duration: 6 bits --cannot be 0--
-% MFAin = MFAout:  8 bits
-% PID: 7+8 bits
-% Flag
+%% Common pack ---> 5 bytes
+%% TimeIn: 8 bits  --cannot be 0--
+%% Duration: 6 bits --cannot be 0--
+%% MFAin = MFAout:  8 bits
+%% PID: 7+8 bits
+%% Flag
 
-% if TimeIN = max -> 1 more byte [repeat]
-% if Duration = max -> 1 more byte [repeat]
-% Flag = 1 -> long PID (not supported yet)
+%% if TimeIN = max -> 1 more byte [repeat]
+%% if Duration = max -> 1 more byte [repeat]
+%% Flag = 1 -> long PID (not supported yet)
 
 
-% Core  Separator: <<0:8>>
-% Write Separator: <<1:1,0:7>>
-%% encode(P1,P2,F,P)->
-%%     B=term_to_binary({P1,P2}),
-%%     {B,F,P}.
+%% Core  Separator: <<0:8>>
+%% Write Separator: <<1:1,0:7>>
+%%%% encode(P1,P2,F,P)->
+%%%%     B=term_to_binary({P1,P2}),
+%%%%     {B,F,P}.
 encode({PID,in,MFAin,TimeIn},{PID,out,MFAout,TimeOut},Famdict,PrevTime)->
-	case Famdict of
-		42 -> 
-			Fo = 0,
-			Fm = 0,
-			MFAbytes = <<0:8>>,
-			PIDbytes = <<0:16>>,
-			NFamdict = 42
-			;
-		_ ->
-			PIDbytes = pid_encode(PID),			
-			{MFAbytes,NFamdict,Fo,Fm} = mfa_encode(MFAin,MFAout,Famdict)
-	end,
+    Top=timer:now_diff(TimeOut,TimeIn),
+    %% if Top>1000->
+    %% 	    io:write({Top});
+    %%    true->
+    %% 	    ok
+    %% end,
+    case Famdict of
+	42 -> 
+	    Fo = 0,
+	    Fm = 0,
+	    MFAbytes = <<0:8>>,
+	    PIDbytes = <<0:16>>,
+	    NFamdict = 42
+		;
+	_ ->
+	    PIDbytes = pid_encode(PID),			
+	    {MFAbytes,NFamdict,Fo,Fm} = mfa_encode(MFAin,MFAout,Famdict)
+    end,
     {NPrevTime,TimeBytes} = time_encode(TimeIn,PrevTime),
     DurationBytes = duration_encode(TimeOut,TimeIn,Fo,Fm),
     {[DurationBytes,TimeBytes,PIDbytes,MFAbytes],NFamdict,NPrevTime};
 
 encode({_PID1,in,_MFA1,_T1},{_PID2,out,_MFA2,_T2},F,P) ->
-    %% io:write('#--diff PID error--'),
-    %% io:write({PID1,MFA1,PID2,MFA2,timediff(T2,T1)}),
-    %% io:nl(),
+    io:write('#--diff PID error--'),io:nl(),
+%%%% io:write({PID1,MFA1,PID2,MFA2,timediff(T2,T1)}),
+%%%% io:nl(),
     {<<0:8>>,F,P}.
 
 
@@ -116,7 +122,7 @@ pid_encode(PID)->
     BID=term_to_binary(PID),
     <<X:8,Y:8,_/binary>>=binary:part(BID,byte_size(BID),-7),
     <<0:1,X:7,Y:8>>.
-	    
+
 mfa_encode(MFA,MFA,Famdict)->
     {ID,NFamdict}=famdict:check(MFA,Famdict),
     case ID of
@@ -129,16 +135,16 @@ mfa_encode(MFAin,MFAout,Famdict)->
     {ID1,NFamdict1}=famdict:check(MFAin,Famdict),
     {ID2,NFamdict}=famdict:check(MFAout,NFamdict1),
     case {ID1,ID2} of
-		{{ID1f,0},{ID2f,0}}->
-			{<<ID1f:8,ID2f:8>>,NFamdict,1,0};
-		{{ID1f,ID1m},{ID2f,0}}->
-			{<<ID1f:8,ID2f:8,ID1m:4,0:4>>,NFamdict,1,1};
-		{{ID1f,0},{ID2f,ID2m}}->
-			{<<ID1f:8,ID2f:8,0:4,ID2m:4>>,NFamdict,1,1};
-		{{ID1f,ID1m},{ID2f,ID2m}}->
-			{<<ID1f:8,ID2f:8,ID1m:4,ID2m:4>>,NFamdict1,1,1}
+	{{ID1f,0},{ID2f,0}}->
+	    {<<ID1f:8,ID2f:8>>,NFamdict,1,0};
+	{{ID1f,ID1m},{ID2f,0}}->
+	    {<<ID1f:8,ID2f:8,ID1m:4,0:4>>,NFamdict,1,1};
+	{{ID1f,0},{ID2f,ID2m}}->
+	    {<<ID1f:8,ID2f:8,0:4,ID2m:4>>,NFamdict,1,1};
+	{{ID1f,ID1m},{ID2f,ID2m}}->
+	    {<<ID1f:8,ID2f:8,ID1m:4,ID2m:4>>,NFamdict1,1,1}
     end.
-	    
+
 time_rec_encode(Time)->
     if Time<?MAX_TIME ->
 	    [Time];
@@ -153,13 +159,13 @@ time_encode(TimeIn,PrevTime)->
 
 duration_encode(TimeIn,TimeOut,Fo,Fm)->
     Duration=timediff(TimeOut,TimeIn),
-	if Duration<?MAX_DUR ->
-		<<Fo:1,Fm:1,Duration:6>>;
-	   true->
-		binary:list_to_bin([<<Fo:1,Fm:1,?MAX_DUR:6>>|
-				    time_rec_encode(Duration-?MAX_DUR)])
-	end.
-		
+    if Duration<?MAX_DUR ->
+	    <<Fo:1,Fm:1,Duration:6>>;
+       true->
+	    binary:list_to_bin([<<Fo:1,Fm:1,?MAX_DUR:6>>|
+				time_rec_encode(Duration-?MAX_DUR)])
+    end.
+
 timediff({M1,S1,U1},{M2,S2,U2})->
     ((M1-M2)*1000000+(S1-S2))*1000000+(U1-U2).
 
@@ -176,10 +182,10 @@ test(X)->
     P=string:concat(atom_to_list(kola),integer_to_list(X)),
     F=string:concat(atom_to_list(lalo),integer_to_list(X)),
     Pabi=pabi:open(P,F,erlang:now()),
- %   P2=pabi:add({c:pid(0,42,0),in,{lala,lolo,2},erlang:now()},{c:pid(0,42,0),out,{lala,lolo,2},erlang:now()},Pabi),
- %  P3=pabi:add({c:pid(0,42,0),in,{lala,lolo,2},erlang:now()},{c:pid(0,42,0),out,{lala,lolo,2},erlang:now()},P2),
+    %%   P2=pabi:add({c:pid(0,42,0),in,{lala,lolo,2},erlang:now()},{c:pid(0,42,0),out,{lala,lolo,2},erlang:now()},Pabi),
+    %%  P3=pabi:add({c:pid(0,42,0),in,{lala,lolo,2},erlang:now()},{c:pid(0,42,0),out,{lala,lolo,2},erlang:now()},P2),
     receive
 	exit->
 	    pabi:close(Pabi)
     end.
-    
+

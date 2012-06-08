@@ -1,3 +1,4 @@
+
 -include_lib("wx/include/wx.hrl").
 -define(DETS_PACK_SIZE,2442).
 
@@ -13,27 +14,29 @@
 
 -define(DEF_GU,3).
 -define(GU,8).
+
 % GU = math:pow(2,DEF_GU) but used in guards
 -record(buffdets, {data,
-				   tab,
-				   pos,
-				   offset,
-				   mode=ready,
-				   static,
-				   ux,
-				   lx,
-				   uz,
-				   lz,
-				   width=1000,
-				   panel,
-				   frame,
-				   left_data=0,
-				   right_data,
-				   zoomin_data,
-				   zoomout_data=0,
-				   labels=[],
-				   zoom_label,
-				   max_zoom,
-				   schedlabels
-				  }).
-%zoom level: 0 = 1-1, max_zoom = reduced to 1 value
+		   tab,
+		   pos,
+		   offset,
+		   mode=ready,
+		   static,
+		   ux,
+		   lx,
+		   uz,
+		   lz,
+		   width=1000,
+		   panel,
+		   frame,
+		   left_data=0,
+		   right_data,
+		   zoomin_data,
+		   zoomout_data=0,
+		   labels=[],
+		   zoom_label,
+		   max_zoom,
+		   schedlabels,
+		   scarlet
+		  }).
+						%zoom level: 0 = 1-1, max_zoom = reduced to 1 value

@@ -35,6 +35,9 @@ start(Fun,FolderName) ->
 start(Fun)->
 	start(Fun,?DEFAULT_FOLDER_NAME,[]).
 
+print(Label)->
+    scarlet:print(Label).
+
 %%--------------------------------------------------------------%%	
 %%---------------------------- testing -------------------------%%
 %%--------------------------------------------------------------%%	
@@ -58,4 +61,8 @@ seq(X)->
 derp(0)->
 	ok;
 derp(X)->
-	derp(X-1).
+    if X div 100 == 0 ->
+	    qijap:print(0);
+       true -> ok
+    end,
+    derp(X-1).

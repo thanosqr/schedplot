@@ -2,11 +2,12 @@
 -compile(export_all).
 -include("hijap.hrl").
 -define(HEIGHT_FACTOR,2).
--define(MAX_HEIGHT,?HEIGHT_FACTOR*9).
+-define(MAX_HEIGHT,?HEIGHT_FACTOR*8).
 -define(LGrey,?wxLIGHT_GREY_PEN).
 -define(Black,?wxBLACK_PEN).
 -define(MGrey,?wxMEDIUM_GREY_PEN).
 -define(Grey,?wxGREY_PEN).
+-define(Red,?wxRED_PEN).
 
 -define(DEF_C,?MGrey).
 
@@ -15,14 +16,14 @@ clear_canvas(Panel)->
     wxDC:clear(Paint),
     wxBufferedPaintDC:destroy(Paint).
 
-% Core Line:
+%% % Core Line:
 
-%   |  |
-% | | ||     |
-% ||||||     | |   |
-% ------------------
-% A horizontal line for Y=Yo
-% Lines of given length starting from Yo
+%% %   |  |
+%% % | | ||     |
+%% % ||||||     | |   |
+%% % ------------------
+%% % A horizontal line for Y=Yo
+%% % Lines of given length starting from Yo
 
 %% drawValues(Panel,Values)->
 %%     Paint = wxBufferedPaintDC:new(Panel),
@@ -42,12 +43,12 @@ drawLines(Paint,[Length|Lengths],X,Yo)->
 
 dl(Paint,X,Yo,Length)->
     wxDC:drawLine(Paint,{X,Yo},{X,Yo-?HEIGHT_FACTOR*Length}).
-    
+
 drawCoreLine(Paint,Lengths,Yo)->
-wxDC:setPen(Paint,?Grey),
+    wxDC:setPen(Paint,?Grey),
     wxDC:drawLine(Paint,{0,Yo},{1000,Yo}),
     wxDC:drawLine(Paint,{0,Yo-?MAX_HEIGHT},{1000,Yo-?MAX_HEIGHT}),
-wxDC:setPen(Paint,?DEF_C),
+    wxDC:setPen(Paint,?DEF_C),
     drawLines(Paint,Lengths,0,Yo).
 
 drawCoreLines(Paint,CLs,SLs)->
@@ -55,29 +56,29 @@ drawCoreLines(Paint,CLs,SLs)->
 drawCoreLines(_,[],_,_)->ok;
 drawCoreLines(Paint,[CL|CLs],Y,[SL|SLs])->
     drawCoreLine(Paint,CL,Y),
-	wxWindow:move(SL,8,Y-18),
+    wxWindow:move(SL,8,Y-18),
     drawCoreLines(Paint,CLs,Y+42,SLs).
 
 drawGrid(Paint,{ZOffset,XOffset},{ZoomLvl,XPos},Labels)->
-	ZoomFactor = round(math:pow(2,ZoomLvl+ZOffset+?DEF_GU-1)),
-	Width=1000,
-	AbsOffset = XOffset+XPos-?DETS_PACK_SIZE,
+    ZoomFactor = round(math:pow(2,ZoomLvl+ZOffset+?DEF_GU-1)),
+    Width=1000,
+    AbsOffset = XOffset+XPos-?DETS_PACK_SIZE,
 
-	Offset=AbsOffset rem ?VERTICAL_INT,
-	wxDC:setPen(Paint,?LGrey),
-	lists:map(fun(X)->
-					  wxDC:drawLine(Paint,{X,0},{X,800})
-			  end,lists:seq(Width-Offset+?VERTICAL_INT,-Offset,-?VERTICAL_INT)),
-	lists:map(fun({L,X,N})->
-					  wxWindow:move(L,X-20+42,810),
-					  wxStaticText:setLabel(L,label_portray(((AbsOffset div ?VERTICAL_INT)+N)*?VERTICAL_INT*ZoomFactor))
-			  end, qutils:zip3(Labels,lists:seq(Width-Offset,-Offset,-?VERTICAL_INT))),
-	wxDC:setPen(Paint,?DEF_C).
+    Offset=AbsOffset rem ?VERTICAL_INT,
+    wxDC:setPen(Paint,?LGrey),
+    lists:map(fun(X)->
+		      wxDC:drawLine(Paint,{X,0},{X,800})
+	      end,lists:seq(Width-Offset+?VERTICAL_INT,-Offset,-?VERTICAL_INT)),
+    lists:map(fun({L,X,N})->
+		      wxWindow:move(L,X-20+42,810),
+		      wxStaticText:setLabel(L,label_portray(((AbsOffset div ?VERTICAL_INT)+N)*?VERTICAL_INT*ZoomFactor))
+	      end, qutils:zip3(Labels,lists:seq(Width-Offset,-Offset,-?VERTICAL_INT))),
+    wxDC:setPen(Paint,?DEF_C).
 
 create_labels(Frame,N)->
-	lists:map(fun(_)->
-					  wxStaticText:new(Frame,?ANY,"")
-				end, lists:seq(0,N)).
+    lists:map(fun(_)->
+		      wxStaticText:new(Frame,?ANY,"")
+	      end, lists:seq(0,N)).
 
 
 label_portray(N)->
@@ -95,9 +96,20 @@ label_portray(N)->
     end.
 
 form(A,B,U)->
-	AL = integer_to_list(A),
-	if (length(AL)==3) or (B==A) ->
-			lists:concat([AL,U]);
-	    true->
-			lists:concat([AL,".",integer_to_list( round((B-A)*math:pow(10,3-length(AL))) ),U])
-	end.
+    AL = integer_to_list(A),
+    if (length(AL)==3) or (B==A) ->
+	    lists:concat([AL,U]);
+       true->
+	    lists:concat([AL,".",integer_to_list( round((B-A)*math:pow(10,3-length(AL))) ),U])
+    end.
+
+
+scarlet(Paint,L,Z,X)->
+    wxDC:setPen(Paint,?Red),
+    lists:map(fun({Time,{SID,_Label}})->
+		      io:write({Time,X,Z,(Time-X) div Z}),io:nl(),
+		      wxDC:drawLine(Paint,
+				    {(Time div Z)-X,SID*42-8-?MAX_HEIGHT},
+				    {(Time div Z)-X,SID*42+2})
+	      end,L),
+    wxDC:setPen(Paint,?DEF_C).
