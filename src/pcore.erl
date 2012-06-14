@@ -1,9 +1,11 @@
+
 -module(pcore).
 -compile(export_all).
 -include("hijap.hrl").
 
 
 start(Fun,FolderName,CoreN,Flags)->
+    io:write(dets:open_file(bolek,[])),
     create_folder(FolderName),
     HName=lists:concat([atom_to_list(FolderName),atom_to_list('/trace_gabi_header')]),
     {ok,FP}=file:open(HName,[write]),
@@ -22,7 +24,8 @@ start(Fun,FolderName,CoreN,Flags)->
 	end,
 
     PIDs = lists:map(fun(X)-> spawn(pcore,start_tracer,[FolderName,X,Flags,T0]) end, lists:seq(1,CoreN)),
-    PID = spawn(?MODULE,master_tracer,[array:fix(array:from_list(PIDs)),0]),
+    {ok,SS}=file:open(lala,[write]),
+    PID = spawn(?MODULE,master_tracer,[array:fix(array:from_list(PIDs)),SS]),
     qutils:reregister(master_tracer,PID),
 	TFlags = [running,scheduler_id,timestamp,{tracer,PID}],
 	case lists:member(gc,Flags) of
@@ -65,6 +68,7 @@ stop(PID)->
     erlang:trace(all,false,[all]),
     master_tracer!{self(),exit},
     scarlet:close(),
+    dets:close(bolek),
     receive
 	trace_stored->ok
     end.
@@ -121,16 +125,17 @@ tracer(Pabi,Prev,TP)->
 %%io:wait_io_mon_reply/2 appears to only enter 
 %%the schedulers (and never leave)
 %%possibly a problem with trace&io;  we ignore those messages
-master_tracer(PIDs,_LTime)->
+master_tracer(PIDs,SS)->
     receive
 	{trace_ts,PID,IO,SID,MFA,Time} ->
 	    case MFA of
 		{io,wait_io_mon_reply,2} ->
 		    ok;
 		_ ->
+		    io:write(SS,{PID,IO,SID,MFA,Time}),
 		    array:get(SID-1,PIDs)!{PID,IO,MFA,Time}  %%0-indexed arrays
 	    end,
-	    master_tracer(PIDs,Time);
+	    master_tracer(PIDs,SS);
 	{trace_ts,PID,SE,_GC_Info,Time} ->
 	    case SE of
 		gc_start->
@@ -139,8 +144,9 @@ master_tracer(PIDs,_LTime)->
 		    Msg = {PID,out,{gc,gc,0},Time}
 	    end,
 	    array:get(array:size(PIDs)-1,PIDs)!Msg,
-	    master_tracer(PIDs,Time);
+	    master_tracer(PIDs,SS);
 	{PID,exit}->
+	    file:close(SS),
 	    fwd_rest(PIDs),
 	    lists:map(fun(P)->P!{exit,self()} end,array:to_list(PIDs)),
 	    lists:map(fun(_)->receive ok -> ok end end, array:to_list(PIDs)),

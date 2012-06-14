@@ -53,16 +53,27 @@ t()->
 	S.
 
 r(S,X)->
-	lists:reverse(lists:sort(dets:match(S,{{X,0,'$1'},'$2','_'}))).
+	lists:reverse(lists:sort(dets:match(S,{{X,0,'$1'},'_'}))).
 
 seq(X)->
-	start({?MODULE,derp,[X*1000000]}).
+    start({?MODULE,derps,[X*1000000]}).
 
+derps(X)->
+    qijap:print(0),
+    derp(X).
 derp(0)->
-	ok;
+%    qijap:print(o),
+    ok;
 derp(X)->
-    if X div 100 == 0 ->
-	    qijap:print(0);
-       true -> ok
-    end,
+%%     if X div 100 == 0 ->
+%% %	    herp(1000000),
+%% 	    qijap:print(0);
+%%        true -> ok
+%%     end,
     derp(X-1).
+
+
+herp(0)->
+    ok;
+herp(X) ->
+    herp(X-1).

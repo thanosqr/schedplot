@@ -89,7 +89,9 @@ store(S)->
 %%%%     B=term_to_binary({P1,P2}),
 %%%%     {B,F,P}.
 encode({PID,in,MFAin,TimeIn},{PID,out,MFAout,TimeOut},Famdict,PrevTime)->
-    Top=timer:now_diff(TimeOut,TimeIn),
+{ok,S}=dets:open_file(bolek,[]),
+    dets:insert(S,{{self(),TimeIn},TimeOut,PID}),
+    %%Top=timer:now_diff(TimeOut,TimeIn),
     %% if Top>1000->
     %% 	    io:write({Top});
     %%    true->
@@ -113,8 +115,6 @@ encode({PID,in,MFAin,TimeIn},{PID,out,MFAout,TimeOut},Famdict,PrevTime)->
 
 encode({_PID1,in,_MFA1,_T1},{_PID2,out,_MFA2,_T2},F,P) ->
     io:write('#--diff PID error--'),io:nl(),
-%%%% io:write({PID1,MFA1,PID2,MFA2,timediff(T2,T1)}),
-%%%% io:nl(),
     {<<0:8>>,F,P}.
 
 
@@ -154,38 +154,14 @@ time_rec_encode(Time)->
     end.
 
 time_encode(TimeIn,PrevTime)->
-    TimeList=time_rec_encode(timediff(TimeIn,PrevTime)),
+    TimeList=time_rec_encode(timer:now_diff(TimeIn,PrevTime)),
     {TimeIn,binary:list_to_bin(TimeList)}.
 
 duration_encode(TimeIn,TimeOut,Fo,Fm)->
-    Duration=timediff(TimeOut,TimeIn),
+    Duration=timer:now_diff(TimeOut,TimeIn),
     if Duration<?MAX_DUR ->
 	    <<Fo:1,Fm:1,Duration:6>>;
        true->
 	    binary:list_to_bin([<<Fo:1,Fm:1,?MAX_DUR:6>>|
 				time_rec_encode(Duration-?MAX_DUR)])
     end.
-
-timediff({M1,S1,U1},{M2,S2,U2})->
-    ((M1-M2)*1000000+(S1-S2))*1000000+(U1-U2).
-
-
-t(X)->
-    P=spawn(pabi,test,[X]),
-    receive
-	exit->
-	    P!exit
-    end.
-
-
-test(X)->
-    P=string:concat(atom_to_list(kola),integer_to_list(X)),
-    F=string:concat(atom_to_list(lalo),integer_to_list(X)),
-    Pabi=pabi:open(P,F,erlang:now()),
-    %%   P2=pabi:add({c:pid(0,42,0),in,{lala,lolo,2},erlang:now()},{c:pid(0,42,0),out,{lala,lolo,2},erlang:now()},Pabi),
-    %%  P3=pabi:add({c:pid(0,42,0),in,{lala,lolo,2},erlang:now()},{c:pid(0,42,0),out,{lala,lolo,2},erlang:now()},P2),
-    receive
-	exit->
-	    pabi:close(Pabi)
-    end.
-

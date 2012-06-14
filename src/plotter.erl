@@ -67,10 +67,10 @@ drawGrid(Paint,{ZOffset,XOffset},{ZoomLvl,XPos},Labels)->
     Offset=AbsOffset rem ?VERTICAL_INT,
     wxDC:setPen(Paint,?LGrey),
     lists:map(fun(X)->
-		      wxDC:drawLine(Paint,{X,0},{X,800})
+		      wxDC:drawLine(Paint,{X,0},{X,?PHEIGHT})
 	      end,lists:seq(Width-Offset+?VERTICAL_INT,-Offset,-?VERTICAL_INT)),
     lists:map(fun({L,X,N})->
-		      wxWindow:move(L,X-20+42,810),
+		      wxWindow:move(L,X-20+42,?PHEIGHT+10),
 		      wxStaticText:setLabel(L,label_portray(((AbsOffset div ?VERTICAL_INT)+N)*?VERTICAL_INT*ZoomFactor))
 	      end, qutils:zip3(Labels,lists:seq(Width-Offset,-Offset,-?VERTICAL_INT))),
     wxDC:setPen(Paint,?DEF_C).
@@ -107,7 +107,6 @@ form(A,B,U)->
 scarlet(Paint,L,Z,X)->
     wxDC:setPen(Paint,?Red),
     lists:map(fun({Time,{SID,_Label}})->
-		      io:write({Time,X,Z,(Time-X) div Z}),io:nl(),
 		      wxDC:drawLine(Paint,
 				    {(Time div Z)-X,SID*42-8-?MAX_HEIGHT},
 				    {(Time div Z)-X,SID*42+2})

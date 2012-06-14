@@ -14,21 +14,15 @@
 
 -define(EXIT,?wxID_EXIT).
 
--define(ZOOM_IN,#wx{event=#wxKey{keyCode=?WXK_NUMPAD_ADD}}).
--define(ZOOM_OUT,#wx{event=#wxKey{keyCode=?WXK_NUMPAD_SUBTRACT}}).
--define(LEFT,#wx{event=#wxKey{keyCode=?WXK_LEFT}}).
--define(RIGHT,#wx{event=#wxKey{keyCode=?WXK_RIGHT}}).
--define(RESET,#wx{event=#wxKey{keyCode=?WXK_HOME}}).
--define(RESIZE,#wx{event=wxEVT_SIZE}).
 -define(QUIT,#wx{id=?EXIT,event=#wxCommand{type=command_menu_selected}}).
 
 
-						%when using buffdets zoom level refers to the index of the buffered zoom levels; ie if we buffer 5 zoom levels the possible values are 1..5 which can refer to n..n+5 actual IDs.
+%%when using buffdets zoom level refers to the index of the buffered zoom levels; ie if we buffer 5 zoom levels the possible values are 1..5 which can refer to n..n+5 actual IDs.
 
 
 init(FolderName)->
     Wx=wx:new(),
-    Frame=wxFrame:new(Wx,?ANY,"",[{size,{1084,900}}]),  
+    Frame=wxFrame:new(Wx,?ANY,"",[{size,{?WIDTH,?HEIGHT}}]),  
     MenuBar = wxMenuBar:new(),
     File = wxMenu:new(),
     wxMenu:append(File,?EXIT,"Quit"),
@@ -36,12 +30,12 @@ init(FolderName)->
     wxFrame:setMenuBar(Frame,MenuBar),
     wxFrame:show(Frame),  
 
-    Panel=wxPanel:new(Frame,[{size,{1000,800}},{pos,{42,0}}]),
+    Panel=wxPanel:new(Frame,[{size,{?PWIDTH,?PHEIGHT}},{pos,{42,0}}]),
     lists:map(fun(XX)->
 		      wxEvtHandler:connect(Panel,XX) 
 	      end, ?CONTROLS),
     wxFrame:connect(Frame,command_menu_selected),
-						%	wxFrame:connect(Frame,close_window),
+    %%wxFrame:connect(Frame,close_window),
     Datapack=buffdets:open(FolderName,Panel,Frame),
     NDatapack=draw(Datapack),
     loop(NDatapack).
@@ -92,24 +86,24 @@ loop(Datapack)->
 
 change_state(How,Datapack)->
     {ZoomLvl,Xpos} = Datapack#buffdets.pos,
-    case How of
-	?RESIZE->
+    case change_decode(How) of
+	resize->
 	    same;
-	?LEFT->
+	left->
 	    if Datapack#buffdets.left_data>=?STEP ->
 		    Datapack#buffdets{pos={ZoomLvl,Xpos-?STEP},
 				      left_data=Datapack#buffdets.left_data-?STEP,
 				      right_data=Datapack#buffdets.right_data+?STEP};
 	       true -> same
 	    end;
-	?RIGHT->
+	right->
 	    if Datapack#buffdets.right_data>=?STEP ->
 		    Datapack#buffdets{pos={ZoomLvl,Xpos+?STEP},
 				      left_data=Datapack#buffdets.left_data+?STEP,
 				      right_data=Datapack#buffdets.right_data-?STEP};
 	       true -> same
 	    end;
-	?ZOOM_IN->
+	zoom_in->
 	    if Datapack#buffdets.zoomin_data>0 ->
 		    Datapack#buffdets{pos={ZoomLvl-1,Xpos},
 				      left_data=2*Datapack#buffdets.left_data,
@@ -118,7 +112,7 @@ change_state(How,Datapack)->
 				      zoomout_data=Datapack#buffdets.zoomout_data+1};
 	       true -> same
 	    end;
-	?ZOOM_OUT->
+	zoom_out->
 	    if Datapack#buffdets.zoomout_data>0 ->
 		    Datapack#buffdets{pos={ZoomLvl+1,Xpos},
 				      left_data=Datapack#buffdets.left_data div 2,
@@ -127,7 +121,7 @@ change_state(How,Datapack)->
 				      zoomout_data=Datapack#buffdets.zoomout_data-1};
 	       true -> same
 	    end;
-	?RESET ->
+	reset->
 	    {BufferXsize,BufferZsize,CoreN}=Datapack#buffdets.static,
 	    buffdets:create_buffer(Datapack#buffdets.tab,
 				   BufferXsize,BufferZsize,CoreN,
@@ -140,7 +134,7 @@ change_state(How,Datapack)->
 				   Datapack#buffdets.schedlabels,
 				   Datapack#buffdets.scarlet
 				  );
-	_->
+	same->
 	    same
     end.
 
@@ -149,3 +143,23 @@ update_zoom_label({Z,_},{ZOffset,_},Label)->
     wxStaticText:setLabel(Label,
 			  lists:concat(["Zoom 1:", 
 					integer_to_list(round(math:pow(2,Z+ZOffset+?DEF_GU-1)))])).
+
+
+change_decode(#wx{event=#wxKey{keyCode=?WXK_NUMPAD_ADD}})->
+    zoom_in;
+change_decode(#wx{event=#wxKey{keyCode=?WXK_ADD}}) ->
+    zoom_in;
+change_decode(#wx{event=#wxKey{keyCode=?WXK_NUMPAD_SUBTRACT}}) ->
+    zoom_out;
+change_decode(#wx{event=#wxKey{keyCode=?WXK_SUBTRACT}}) ->
+    zoom_out;
+change_decode(#wx{event=#wxKey{keyCode=?WXK_LEFT}}) ->
+    left;
+change_decode(#wx{event=#wxKey{keyCode=?WXK_RIGHT}}) ->
+    right;
+change_decode(#wx{event=#wxKey{keyCode=?WXK_HOME}}) ->
+    reset;
+change_decode(#wx{event=wxEVT_SIZE}) ->
+    resize;
+change_decode(_) ->
+    same.

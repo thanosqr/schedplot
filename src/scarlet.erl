@@ -1,3 +1,4 @@
+
 -module(scarlet).
 -compile(export_all).
 -include("hijap.hrl").
@@ -7,7 +8,6 @@ init(FolderName,T0)->
     PID = spawn(?MODULE,loop,[[],T0,FolderName]),
     qutils:reregister(scarlet,PID).
 
-
 close()->
     scarlet!{exit,self()},
     receive
@@ -15,10 +15,10 @@ close()->
 	    ok
     end.
 
-
 print(Label)->
-    scarlet!{erlang:now(),
-	     {erlang:system_info(scheduler_id),Label}}.
+    T = erlang:now(),
+    SID = erlang:system_info(scheduler_id),
+    scarlet!{T,{SID,Label}}.
 
 loop(Messages,T0,FolderName)->
     receive

@@ -32,6 +32,7 @@ get_packet(Bytes)->
 		{Duration,Fo,Fm,Bytes3}->
 		    case get_time(Bytes3) of
 			{Time,Bytes4} ->
+%io:write({Time}),io:nl(),
 			    case get_pid(Bytes4) of
 				{PID,Bytes5} ->
 				    case get_mfa(Fo,Fm,Bytes5) of
@@ -54,6 +55,7 @@ get_byte(Bytes)->
 		{ok,[D|Data]}->
 		    {D,Bytes#bytes{left=erlang:length(Data),data=Data}};
 		eof -> 
+io:write(normal_close),
 		    file:close(Bytes#bytes.file),
 		    end_of_file
 	    end;
@@ -296,23 +298,26 @@ generate_zoom_lvls(Dets,{FromCore,ToCore},MaxZoomOut)->
 	      end, lists:seq(0,MaxZoomOut)).
 
 traverse(Dets,CoreID,OldZoom,[[Key1],[Key2]|Keys])->
-    [{_,Values1}]=dets:lookup(Dets,{CoreID,OldZoom,Key1}),
-    [{_,Values2}]=dets:lookup(Dets,{CoreID,OldZoom,Key2}),
+    [{K1,Values1}]=dets:lookup(Dets,{CoreID,OldZoom,Key1}),
+    [{K2,Values2}]=dets:lookup(Dets,{CoreID,OldZoom,Key2}),
     Values=lists:append(zoom_out(Values1),zoom_out(Values2)),
     dets:insert(Dets,{{CoreID,OldZoom+1,Key2 div 2},Values}),
+    dets:insert(Dets,{K1,qutils:maptrunc(Values1)}),
+    dets:insert(Dets,{K2,qutils:maptrunc(Values2)}),
     traverse(Dets,CoreID,OldZoom,Keys);
 traverse(Dets,CoreID,OldZoom,[[Key1]])->
-    [{_,Values1}]=dets:lookup(Dets,{CoreID,OldZoom,Key1}),
+    [{K1,Values1}]=dets:lookup(Dets,{CoreID,OldZoom,Key1}),
     Values=zoom_out(Values1),
+    dets:insert(Dets,{K1,qutils:maptrunc(Values1)}),
     dets:insert(Dets,{{CoreID,OldZoom+1,(Key1+1) div 2},Values});
 traverse(_Dets,_CoreID,_OldZoom,_Keys) ->
     ok.
 
 
 zoom_out([H1,H2|T])->
-    [round((H1+H2)/2)|zoom_out(T)];
+    [(H1+H2)/2|zoom_out(T)];
 zoom_out([H]) ->
-    [round(H/2)];
+    [H/2];
 zoom_out([]) ->
     [].
 

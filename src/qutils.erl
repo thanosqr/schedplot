@@ -52,3 +52,14 @@ reregister(Name,PID)->
 			ok
 	end,
 	register(Name,PID).
+
+
+maptrunc(L)->
+    lists:map(fun(X)->
+		      strunc(X)
+	      end,L).
+
+strunc(X) when (X<1) and (X>0) ->
+    1;
+strunc(X) ->
+    trunc(X).

@@ -12,7 +12,7 @@ open(FolderName,Panel,Frame)->
     open(FolderName,?DEF_BUFFER_X,?DEF_BUFFER_Z,Panel,Frame).
 
 open(FolderName,BufferXsize,BufferZsize,Panel,Frame)->
-    Width=1000,
+    Width=?WIDTH,
     {ok,Tab} = dets:open_file(lists:concat([atom_to_list(FolderName),"/analyzed_trace"]),
 			      [{access,read}]),
     [{init_state,Max_Zoom,CoreN}]=dets:lookup(Tab,init_state),
@@ -29,7 +29,7 @@ open(FolderName,BufferXsize,BufferZsize,Panel,Frame)->
 	{ok,true} ->
 	    wxStaticText:setLabel(lists:last(SchedLabels), "GC")
     end,
-    Zoom_Label=wxStaticText:new(Frame,?ANY,"",[{pos,{Width-84,842}}]),
+    Zoom_Label=wxStaticText:new(Frame,?ANY,"",[{pos,{?PWIDTH-48,?PHEIGHT+42}}]),
     create_buffer(Tab,BufferXsize,BufferZsize,
 		  CoreN,Panel,Frame,Max_Zoom,
 		  Labels,Width,Zoom_Label,
@@ -93,8 +93,8 @@ update(PID,Adj,Old)->
 create_buffer(Tab,BufferXsize,BufferZsize,CoreN,Panel,Frame,Max_Zoom,Labels,Width,Zoom_Label,SchedLabels,Scarlet)->
     Xs=10000,
     Zs = 42,
-						% When the zoom_lvl = Max_Zoom, the whole graph is 1px.
-    Zoom=Max_Zoom-trunc(math:log(Width)/math:log(2))-1,
+    %% When the zoom_lvl = Max_Zoom, the whole graph is 1px.
+    Zoom=Max_Zoom-trunc(math:log(Width)/math:log(2))+1, %%zoom_make
     refresh_buffer({0,0},
 		   #buffdets{tab=Tab,
 			     offset={Zoom-(BufferZsize div 2),
