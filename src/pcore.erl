@@ -5,7 +5,7 @@
 
 
 start(Fun,FolderName,CoreN,Flags)->
-    io:write(dets:open_file(bolek,[])),
+%    io:write(dets:open_file(bolek,[])),
     create_folder(FolderName),
     HName=lists:concat([atom_to_list(FolderName),atom_to_list('/trace_gabi_header')]),
     {ok,FP}=file:open(HName,[write]),
@@ -16,6 +16,7 @@ start(Fun,FolderName,CoreN,Flags)->
     io:put_chars(FP,"."),			 
     file:close(FP),
     T0 = erlang:now(),
+%%    T0={0,0,0},
     scarlet:init(FolderName,T0),
     PIDapplyT = spawn(?MODULE,wait_apply,[Fun]),    
 	case lists:member(trace_tracer,Flags) of
@@ -24,20 +25,27 @@ start(Fun,FolderName,CoreN,Flags)->
 	end,
 
     PIDs = lists:map(fun(X)-> spawn(pcore,start_tracer,[FolderName,X,Flags,T0]) end, lists:seq(1,CoreN)),
-    {ok,SS}=file:open(lala,[write]),
-    PID = spawn(?MODULE,master_tracer,[array:fix(array:from_list(PIDs)),SS]),
+    PID = spawn(?MODULE,master_tracer,[array:fix(array:from_list(PIDs)),42]),
     qutils:reregister(master_tracer,PID),
-	TFlags = [running,scheduler_id,timestamp,{tracer,PID}],
-	case lists:member(gc,Flags) of
-		false ->
-			erlang:trace(PIDapply,true,TFlags);
-		true ->
-			erlang:trace(PIDapply,true,[garbage_collection|TFlags])
-	end,
+    TFlags = [running,scheduler_id,timestamp,{tracer,PID}],
+    case lists:member(gc,Flags) of
+    	false ->
+    	    erlang:trace(PIDapply,true,TFlags);
+    	true ->
+    	    erlang:trace(PIDapply,true,[garbage_collection|TFlags])
+    end,
     PIDapplyT!{start,self()},
     receive
-		apply_done->ok
+    		apply_done->ok
     end,
+    %% lists:map(fun(M)-> PID!M, timer:sleep(42) end,
+    %% 	      [ {trace_ts,1,in,1,{a,a,2},{0,0,0}},
+    %% 		{trace_ts,1,out,1,{a,a,2},{0,0,1}},
+    %% 		{trace_ts,1,in,1,{a,a,2},{0,0,200}},
+    %% 		{trace_ts,1,out,1,{a,a,2},{0,0,208}},
+    %% 		{trace_ts,1,in,1,{a,a,2},{0,0,500}},
+    %% 		{trace_ts,1,out,1,{a,a,2},{0,0,600}}
+    %% 	      ]),
     case lists:member(no_auto_stop,Flags) of
 		true  -> ok;
 		false -> stop()
@@ -68,7 +76,7 @@ stop(PID)->
     erlang:trace(all,false,[all]),
     master_tracer!{self(),exit},
     scarlet:close(),
-    dets:close(bolek),
+%    dets:close(bolek),
     receive
 	trace_stored->ok
     end.
@@ -132,7 +140,7 @@ master_tracer(PIDs,SS)->
 		{io,wait_io_mon_reply,2} ->
 		    ok;
 		_ ->
-		    io:write(SS,{PID,IO,SID,MFA,Time}),
+%		    io:write(SS,{PID,IO,SID,MFA,Time}),
 		    array:get(SID-1,PIDs)!{PID,IO,MFA,Time}  %%0-indexed arrays
 	    end,
 	    master_tracer(PIDs,SS);
@@ -146,7 +154,7 @@ master_tracer(PIDs,SS)->
 	    array:get(array:size(PIDs)-1,PIDs)!Msg,
 	    master_tracer(PIDs,SS);
 	{PID,exit}->
-	    file:close(SS),
+%	    file:close(SS),
 	    fwd_rest(PIDs),
 	    lists:map(fun(P)->P!{exit,self()} end,array:to_list(PIDs)),
 	    lists:map(fun(_)->receive ok -> ok end end, array:to_list(PIDs)),

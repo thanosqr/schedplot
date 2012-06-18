@@ -1,3 +1,4 @@
+
 -module(ibap).
 -compile(export_all).
 -include("hijap.hrl").
@@ -244,7 +245,8 @@ insert(Out,Val)->
 
 save(Out)->
     dets:insert(Out#out.file,
-		{{Out#out.coreID, Out#out.zoom, Out#out.key},Out#out.data}),
+		{{Out#out.coreID, Out#out.zoom, Out#out.key},
+		 lists:reverse(Out#out.data)}),
     Out#out{data=[],
 	    key=Out#out.key+1,
 	    size=0, 

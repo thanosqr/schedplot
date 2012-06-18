@@ -65,6 +65,7 @@ update(Encoded,Data)->
 
 store(S)->
     L=lists:reverse(S#pabi.data),
+%    L=S#pabi.data,
     B=binary:list_to_bin(L),
     file:write(S#pabi.file,B),
     S#pabi{data=[],
@@ -89,8 +90,9 @@ store(S)->
 %%%%     B=term_to_binary({P1,P2}),
 %%%%     {B,F,P}.
 encode({PID,in,MFAin,TimeIn},{PID,out,MFAout,TimeOut},Famdict,PrevTime)->
-{ok,S}=dets:open_file(bolek,[]),
-    dets:insert(S,{{self(),TimeIn},TimeOut,PID}),
+
+%{ok,S}=dets:open_file(bolek,[]),
+%    dets:insert(S,{{self(),TimeIn},TimeOut,PID}),
     %%Top=timer:now_diff(TimeOut,TimeIn),
     %% if Top>1000->
     %% 	    io:write({Top});
@@ -110,7 +112,8 @@ encode({PID,in,MFAin,TimeIn},{PID,out,MFAout,TimeOut},Famdict,PrevTime)->
 	    {MFAbytes,NFamdict,Fo,Fm} = mfa_encode(MFAin,MFAout,Famdict)
     end,
     {NPrevTime,TimeBytes} = time_encode(TimeIn,PrevTime),
-    DurationBytes = duration_encode(TimeOut,TimeIn,Fo,Fm),
+    DurationBytes = duration_encode(TimeIn,TimeOut,Fo,Fm),
+%io:write({self(),PID,TimeIn,TimeOut,PrevTime,'   ', TimeBytes,DurationBytes,Fo,Fm,'-----'}),io:nl(),
     {[DurationBytes,TimeBytes,PIDbytes,MFAbytes],NFamdict,NPrevTime};
 
 encode({_PID1,in,_MFA1,_T1},{_PID2,out,_MFA2,_T2},F,P) ->
