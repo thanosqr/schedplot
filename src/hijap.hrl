@@ -1,6 +1,6 @@
 
 -include_lib("wx/include/wx.hrl").
--define(DETS_PACK_SIZE,2442).
+-define(DETS_PACK_SIZE,4096).
 
 -define(DEFAULT_FNAME,trace_famdict).
 -define(DEFAULT_GNAME,trace_gabi).

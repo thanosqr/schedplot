@@ -147,11 +147,11 @@ update_zoom_label({Z,_},{ZOffset,_},Label)->
 
 change_decode(#wx{event=#wxKey{keyCode=?WXK_NUMPAD_ADD}})->
     zoom_in;
-change_decode(#wx{event=#wxKey{keyCode=?WXK_ADD}}) ->
+change_decode(#wx{event=#wxKey{keyCode=?WXK_DOWN}}) ->
     zoom_in;
 change_decode(#wx{event=#wxKey{keyCode=?WXK_NUMPAD_SUBTRACT}}) ->
     zoom_out;
-change_decode(#wx{event=#wxKey{keyCode=?WXK_SUBTRACT}}) ->
+change_decode(#wx{event=#wxKey{keyCode=?WXK_UP}}) ->
     zoom_out;
 change_decode(#wx{event=#wxKey{keyCode=?WXK_LEFT}}) ->
     left;

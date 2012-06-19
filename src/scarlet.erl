@@ -43,7 +43,7 @@ open(FolderName)->
 
 draw(Paint,{ZPos,XPos},{Zoff,Xoff},Width,D)->
     X = XPos+Xoff-?DETS_PACK_SIZE,
-    Z=round(math:pow(2,ZPos+Zoff+?DEF_GU-1)),
+    Z=round(math:pow(2,ZPos+Zoff+?DEF_GU-1)),  %edit
     L=dict:to_list(get_from_to(X,X+Width*Z,D)),
     plotter:scarlet(Paint,L,Z,X).
     

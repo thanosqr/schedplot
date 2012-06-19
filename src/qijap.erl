@@ -56,18 +56,22 @@ r(S,X)->
 	lists:reverse(lists:sort(dets:match(S,{{X,0,'$1'},'_'}))).
 
 seq(X)->
-    start({?MODULE,derps,[X*1000000]}).
+    start({?MODULE,derps,[X*1000*1000]},[]).
 
 derps(X)->
+    io:write({X}),io:nl(),
     qijap:print(0),
     derp(X).
 derp(0)->
-%    qijap:print(o),
+    qijap:print(o),
     ok;
 derp(X)->
-    if X div 100 == 0 ->
+%    qijap:print(42),
+    if X rem 100000 == 0 ->
 %	    herp(1000000),
 	    qijap:print(0);
+       %% (X<100) and ( X div 10 ==0)->
+       %% 	    qijap:print(42);
        true -> ok
     end,
     derp(X-1).
@@ -112,30 +116,29 @@ sd()->
 			 of
 			     {[[V1]],[[V2]]}->
 				 case overlap(V1,V2) of
-				     false -> ok;
-				     true -> 
-					 io:write({Zoom,Key}),io:nl(),
-					 %% io:write(V1),io:nl(),
-					 %% io:write(V2),io:nl(),
+				     0 -> ok;
+				     N -> 
+					 io:write({Zoom,Key,N}),io:nl(),
+					 io:write(V1),io:nl(),
+					 io:write(V2),io:nl(),
 					 io:nl()
 
 
 				 end;
 			     _-> ok
 			 end
-		 end,lists:seq(1,257))
-	      end,lists:seq(0,20)).
+		 end,lists:seq(1,500))
+	      end,lists:seq(0,0)).
 
 
-overlap([],[])->
-    false;
+
 overlap([],_)->
-    false;
+    0;
 overlap(_,[])->
-    false;
+    0;
 overlap([V1|T1],[V2|T2])->
     if V1+V2 > 8 ->
-	    true;
+	    1+overlap(T1,T2);
        true->
 	    overlap(T1,T2)
     end.

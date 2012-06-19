@@ -60,7 +60,7 @@ drawCoreLines(Paint,[CL|CLs],Y,[SL|SLs])->
     drawCoreLines(Paint,CLs,Y+42,SLs).
 
 drawGrid(Paint,{ZOffset,XOffset},{ZoomLvl,XPos},Labels)->
-    ZoomFactor = round(math:pow(2,ZoomLvl+ZOffset+?DEF_GU-1)),
+    ZoomFactor = round(math:pow(2,ZoomLvl+ZOffset+?DEF_GU-1)), %edit
     Width=1000,
     AbsOffset = XOffset+XPos-?DETS_PACK_SIZE,
 

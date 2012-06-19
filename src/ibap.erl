@@ -1,4 +1,3 @@
-
 -module(ibap).
 -compile(export_all).
 -include("hijap.hrl").
@@ -56,7 +55,7 @@ get_byte(Bytes)->
 		{ok,[D|Data]}->
 		    {D,Bytes#bytes{left=erlang:length(Data),data=Data}};
 		eof -> 
-io:write(normal_close),
+io:write(normal_close),io:nl(),
 		    file:close(Bytes#bytes.file),
 		    end_of_file
 	    end;
@@ -177,6 +176,19 @@ pack(Duration,Time,_PID,_MFA)->
 get_times(Bytes)->
     get_packet(Bytes).
 
+test_cv(File,GU)->
+   test_calc_val( #in{file=File,
+		  left=0,
+		  value=0,
+		  ones=0
+		 },GU).
+test_calc_val(In,GU)->
+    case calc_val(In,GU) of
+	end_of_file ->
+	    [];
+	{V,In2} ->
+	    [V|test_calc_val(In2,GU)]
+    end.
 
 calc_val(end_of_file,_)->
     end_of_file;
@@ -203,6 +215,16 @@ get_values(In,GU)->
 	    {GU-Left,Left*In#in.value,In#in{left=0}}
     end.
 
+%% 1-3 6-8
+%% 1 1 1 0 0 1 1 1  6
+%% 0 0 3 =0
+%% 3 1 3 
+%% 0 1 3 =3
+%% 2 0 3 
+%% 0 0 3 =3
+%% 3 1 3
+%% 0 1 3 =6
+
 refill(In)->
     case In#in.value of
 	1 ->
@@ -219,7 +241,10 @@ refill(In)->
 	    In#in{left=In#in.ones,
 		  value=1}
     end.
-
+%% test_get_times([])->
+%%     end_of_file;
+%% test_get_times([H|T])->
+%%     {T,H}.
 
 decode(In,Out,GU)->
     case calc_val(In,GU) of
@@ -302,7 +327,7 @@ generate_zoom_lvls(Dets,{FromCore,ToCore},MaxZoomOut)->
 traverse(Dets,CoreID,OldZoom,[[Key1],[Key2]|Keys])->
     [{K1,Values1}]=dets:lookup(Dets,{CoreID,OldZoom,Key1}),
     [{K2,Values2}]=dets:lookup(Dets,{CoreID,OldZoom,Key2}),
-    Values=lists:append(zoom_out(Values1),zoom_out(Values2)),
+    Values=zoom_out(lists:append(Values1,Values2)),
     dets:insert(Dets,{{CoreID,OldZoom+1,Key2 div 2},Values}),
     dets:insert(Dets,{K1,qutils:maptrunc(Values1)}),
     dets:insert(Dets,{K2,qutils:maptrunc(Values2)}),
