@@ -41,6 +41,7 @@ init(FolderName)->
     loop(NDatapack).
 
 draw(Datapack)->
+io:write({Datapack#buffdets.pos,Datapack#buffdets.offset}),io:nl(),
     {Values,NDatapack} = buffdets:read(Datapack),
 
     Paint = wxBufferedPaintDC:new(Datapack#buffdets.panel),
@@ -62,7 +63,7 @@ draw(Datapack)->
 
 
 loop(Datapack)->
-io:write({Datapack#buffdets.pos,Datapack#buffdets.offset}),io:nl(),
+
     receive
 	?QUIT->
 	    wxWindow:close(Datapack#buffdets.frame,[]),

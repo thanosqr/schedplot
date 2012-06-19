@@ -108,7 +108,8 @@ scarlet(Paint,L,Z,X)->
     wxDC:setPen(Paint,?Red),
     lists:map(fun({Time,{SID,_Label}})->
 		      wxDC:drawLine(Paint,
-				    {(Time div Z)-X,SID*42-8-?MAX_HEIGHT},
-				    {(Time div Z)-X,SID*42+2})
+				    {(Time-X) div Z,SID*42-8-?MAX_HEIGHT},
+				    {(Time-X) div Z,SID*42+2})
 	      end,L),
+io:nl(),
     wxDC:setPen(Paint,?DEF_C).

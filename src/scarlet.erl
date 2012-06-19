@@ -42,14 +42,17 @@ open(FolderName)->
     dict:from_list(L).
 
 draw(Paint,{ZPos,XPos},{Zoff,Xoff},Width,D)->
-    X = XPos+Xoff-?DETS_PACK_SIZE,
+
     Z=round(math:pow(2,ZPos+Zoff+?DEF_GU-1)),  %edit
+    X = (XPos+Xoff-?DETS_PACK_SIZE)*Z,
     L=dict:to_list(get_from_to(X,X+Width*Z,D)),
+%    io:write({X,Z,X+Width*Z,length(L)}),io:nl(),
     plotter:scarlet(Paint,L,Z,X).
     
 
 get_from_to(X1,X2,D)->
     dict:filter(fun(X,_L)->
+
 			   if (X1 =< X) and (X=<X2) ->
 				   true;
 			      true ->

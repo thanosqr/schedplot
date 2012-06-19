@@ -40,17 +40,23 @@ getData(Datapack)->
     Duration = Datapack#buffdets.width,
     Data = Datapack#buffdets.data,
     ArrayID = (From div (?DETS_PACK_SIZE+1)),          % 1-indexed
-    ArrayIndex = (From rem (?DETS_PACK_SIZE+1)),
+    ArrayIndex = (From rem (?DETS_PACK_SIZE+1)+1),
+
     if ArrayIndex+Duration =< ?DETS_PACK_SIZE ->
 	    lists:map(fun(CoreData)->
+    io:write({a,From,ArrayID,length(CoreData),ArrayIndex}),io:nl(),
 			      DL=lists:nth(ArrayID,CoreData),
 			      qutils:sublist(DL,ArrayIndex,Duration)
 		      end,lists:nth(ZoomLvl,Data));
        ArrayIndex+Duration > ?DETS_PACK_SIZE ->
 	    lists:map(fun(CoreData)->
+    io:write({a,From,ArrayID,length(CoreData),ArrayIndex}),io:nl(),
 			      lists:append(
-				qutils:sublist(lists:nth(ArrayID,CoreData),ArrayIndex,?DETS_PACK_SIZE-ArrayIndex),
-				qutils:sublist(lists:nth(ArrayID+1,CoreData),1,Duration-?DETS_PACK_SIZE+ArrayIndex))
+				qutils:sublist(lists:nth(ArrayID,CoreData),
+					       ArrayIndex,
+					       ?DETS_PACK_SIZE-ArrayIndex),
+				qutils:sublist(lists:nth(ArrayID+1,CoreData),1,
+					       Duration-?DETS_PACK_SIZE+ArrayIndex))
 		      end,lists:nth(ZoomLvl,Data))
     end.
 
@@ -74,11 +80,13 @@ getData(Datapack)->
 %% ----------------------------------------------------------------------
 
 read(Datapack)->
+io:write(hiii),
     {getData(Datapack),
      case category(Datapack) of
 	 nu ->
 	     Datapack;
 	 Adj ->
+%io:write(kiki),
 	     spawn(?MODULE,update,[self(),Adj,Datapack]),
 	     Datapack#buffdets{mode=update}
      end}.
