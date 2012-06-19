@@ -62,6 +62,7 @@ draw(Datapack)->
 
 
 loop(Datapack)->
+io:write({Datapack#buffdets.pos,Datapack#buffdets.offset}),io:nl(),
     receive
 	?QUIT->
 	    wxWindow:close(Datapack#buffdets.frame,[]),
@@ -86,6 +87,7 @@ loop(Datapack)->
 
 change_state(How,Datapack)->
     {ZoomLvl,Xpos} = Datapack#buffdets.pos,
+    {_,Xoff} = Datapack#buffdets.offset,
     case change_decode(How) of
 	resize->
 	    same;
@@ -105,7 +107,7 @@ change_state(How,Datapack)->
 	    end;
 	zoom_in->
 	    if Datapack#buffdets.zoomin_data>0 ->
-		    Datapack#buffdets{pos={ZoomLvl-1,Xpos},
+		    Datapack#buffdets{pos={ZoomLvl-1,(Xpos-?DETS_PACK_SIZE+Xoff)*2+?DETS_PACK_SIZE-Xoff},
 				      left_data=2*Datapack#buffdets.left_data,
 				      right_data=2*Datapack#buffdets.right_data,
 				      zoomin_data=Datapack#buffdets.zoomin_data-1,
@@ -114,7 +116,7 @@ change_state(How,Datapack)->
 	    end;
 	zoom_out->
 	    if Datapack#buffdets.zoomout_data>0 ->
-		    Datapack#buffdets{pos={ZoomLvl+1,Xpos},
+		    Datapack#buffdets{pos={ZoomLvl+1,((Xpos-?DETS_PACK_SIZE+Xoff) div 2)+?DETS_PACK_SIZE-Xoff},
 				      left_data=Datapack#buffdets.left_data div 2,
 				      right_data=Datapack#buffdets.right_data div 2,
 				      zoomin_data=Datapack#buffdets.zoomin_data+1,

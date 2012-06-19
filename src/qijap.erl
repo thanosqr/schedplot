@@ -66,14 +66,10 @@ derp(0)->
     qijap:print(o),
     ok;
 derp(X)->
-%    qijap:print(42),
-    if X rem 100000 == 0 ->
-%	    herp(1000000),
+   if X rem 100000 == 0 ->
 	    qijap:print(0);
-       %% (X<100) and ( X div 10 ==0)->
-       %% 	    qijap:print(42);
-       true -> ok
-    end,
+      true -> ok
+   end,
     derp(X-1).
 
 
@@ -107,12 +103,12 @@ search()->
 		    end).
 
 
-sd()->
+sd(C1,C2)->
     S=t(),
     lists:map(fun(Zoom)->
        lists:map(fun(Key)->
 			 case
-			     {dets:match(S,{{1,Zoom,Key},'$1'}),dets:match(S,{{2,Zoom,Key},'$1'})}
+			     {dets:match(S,{{C1,Zoom,Key},'$1'}),dets:match(S,{{C2,Zoom,Key},'$1'})}
 			 of
 			     {[[V1]],[[V2]]}->
 				 case overlap(V1,V2) of
