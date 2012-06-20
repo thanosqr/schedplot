@@ -116,7 +116,7 @@ encode({PID,in,MFAin,TimeIn},{PID,out,MFAout,TimeOut},Famdict,PrevTime)->
     {[DurationBytes,TimeBytes,PIDbytes,MFAbytes],NFamdict,NPrevTime};
 
 encode({_PID1,in,_MFA1,_T1},{_PID2,out,_MFA2,_T2},F,P) ->
-    io:write('#--diff PID error--'),io:nl(),
+%    io:write('#--diff PID error--'),io:nl(),
     {<<0:8>>,F,P}.
 
 

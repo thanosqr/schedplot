@@ -84,32 +84,30 @@ create_labels(Frame,N)->
 
 label_portray(N)->
     if N==0 ->
-	    form(0,0,"");
+	    form(0,"");
        N < 1000 ->
-	    form(N,N,"us");
+	    form(N,"us");
        N < 1000*1000 ->
-	    form(N div 1000,N/1000, "ms");
+	    form(N/1000, "ms");
        N < 60*1000*1000 ->
-	    form(N div (1000*1000), N/(1000*1000), "s");
+	    form(N/(1000*1000), "s");
        true ->
-	    form(N div (60*1000*1000), N/(60*1000*1000), "m")
+	    form(N/(60*1000*1000), "m")
     end.
 
-form(A,B,U)->
-    AL = integer_to_list(A),
-    if (length(AL)==3) or (B==A) ->
+form(R,U)->
+    AL = integer_to_list(trunc(R)),
+    if (length(AL)==3) or (R==trunc(R)) ->
 	    lists:concat([AL,U]);
        true->
-	    %% 48: ascii code of 0
-	    case integer_to_list(round((B-A)*math:pow(10,3-length(AL)))) of
-		[48] -> 
-		    lists:concat([AL,U]);
-		Dec ->
-		    Zeroes=lists:map(fun(_)->48 end,lists:seq(length(AL),length(Dec),-1)),
-		    lists:concat([AL,".",Zeroes,Dec ,U])
-	    end
+	    Dec = get_N_dec(R-trunc(R), 3-length(AL)),
+	    lists:concat([AL,".",Dec,U])
     end.
 
+%% 48: ascii code of 0
+get_N_dec(_,0)->[];
+get_N_dec(R,N)->
+    [trunc(R*10)+48|get_N_dec(R*10-trunc(R*10),N-1)].
 
 scarlet(Paint,L,Z,X)->
     wxDC:setPen(Paint,?Red),

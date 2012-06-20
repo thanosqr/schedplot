@@ -43,7 +43,7 @@ print(Label)->
 %%--------------------------------------------------------------%%	
 
 list(X)->
-	start({lists,seq,[1,X*1000*100]},[trace_tracer]).
+	start({lists,seq,[1,X*1000*100]},[trace_all]).
 
 nlist(X)->
 	start({lists,seq,[1,X*1000*100]}).
@@ -55,11 +55,21 @@ t()->
 r(S,X)->
 	lists:reverse(lists:sort(dets:match(S,{{X,0,'$1'},'_'}))).
 
+seqs(X)->
+        start({?MODULE,herps,[X*1000*1000]},[]).
+herps(X)->
+    spawn(?MODULE,herp,[X,self()]),
+    receive
+	done->ok
+    end.
+
+herp(X,P)->
+    derps(X),
+    P!done.
 seq(X)->
     start({?MODULE,derps,[X*1000*1000]},[]).
 
 derps(X)->
-    io:write({X}),io:nl(),
     qijap:print("start"),
     derp(X).
 derp(0)->

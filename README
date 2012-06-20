@@ -70,8 +70,3 @@ Resizing the window or exiting and restarting might result in a grey window; cli
 
 Monitor memory consumption; sometimes trace messages are produced faster than they can be stored.
 
------------------ Coming Soon -----------------
-
-Selective tracing (you can try using erlang:trace_pattern/[2-3] but it has not been tested so far)
-
-More user-friendly graph interface

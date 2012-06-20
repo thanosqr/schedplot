@@ -16,7 +16,7 @@ start(Fun,FolderName,CoreN,Flags)->
     io:put_chars(FP,"."),			 
     file:close(FP),
     PIDapplyT = spawn(?MODULE,wait_apply,[Fun]),    
-	case lists:member(trace_tracer,Flags) of
+	case lists:member(trace_all,Flags) of
 		false -> PIDapply = PIDapplyT;
 		true -> PIDapply = all
 	end,
@@ -27,7 +27,7 @@ start(Fun,FolderName,CoreN,Flags)->
     PID = spawn(?MODULE,master_tracer,[array:fix(array:from_list(PIDs)),42]),
     qutils:reregister(master_tracer,PID),
 
-    TFlags = [running,scheduler_id,timestamp,{tracer,PID}],
+    TFlags = [running,scheduler_id,timestamp,set_on_spawn,{tracer,PID}],
     case lists:member(gc,Flags) of
     	false ->
     	    erlang:trace(PIDapply,true,TFlags);
@@ -38,8 +38,8 @@ start(Fun,FolderName,CoreN,Flags)->
     receive
     		apply_done->ok
     end,
-    io:write({time,timer:now_diff(erlang:now(),T0)}),
-    io:nl(),
+%%    io:write({time,timer:now_diff(erlang:now(),T0)}),
+%%    io:nl(),
 
     %% lists:map(fun(M)-> PID!M, timer:sleep(42) end,
     %% 	      [ {trace_ts,1,in,1,{a,a,2},{0,0,0}},
@@ -118,17 +118,17 @@ tracer(Pabi,Prev,TP)->
 	    P2 = {PID,IO,MFA,Time},
 	    case IO of
 		in -> 
-		    case Prev of 
-			null -> ok;
-			{_,in,_,_}->
-			    io:write('---eeek----'),io:nl()
-		    end,
+%% 		    case Prev of 
+%% 			null -> ok;
+%% 			{_,in,_,_}->
+%% %%			    io:write('---eeek----'),io:nl()
+%% 		    end,
 		    NPrev = P2,
 		    NPabi = Pabi;
 		out ->
 		    case Prev of
 			null ->
-			    io:write('---iiik----'),io:nl(),
+%%			    io:write('---iiik----'),io:nl(),
 			    NPrev = null,
 			    NPabi = Pabi;
 			_ ->

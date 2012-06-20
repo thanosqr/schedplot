@@ -55,7 +55,7 @@ get_byte(Bytes)->
 		{ok,[D|Data]}->
 		    {D,Bytes#bytes{left=erlang:length(Data),data=Data}};
 		eof -> 
-io:write(normal_close),io:nl(),
+%%io:write(normal_close),io:nl(),
 		    file:close(Bytes#bytes.file),
 		    end_of_file
 	    end;
