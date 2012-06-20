@@ -92,6 +92,21 @@ update(PID,Adj,Old)->
     PID!{new_buffer,Buffer}.	
 
 
+buffer_jump(Buffer,From,To)->
+    {BufferXsize,BufferZsize,_CoreN}=Buffer#buffdets.static,
+    X = (From div ?DETS_PACK_SIZE)*?DETS_PACK_SIZE,
+    Zoom=trunc(math:log((To-X)/Buffer#buffdets.width)/math:log(2)),
+    refresh_buffer({0,0},
+		   Buffer#buffdets{left_data=1000,
+				    right_data=1000,
+				    zoomin_data=Zoom,
+				    zoomout_data=Buffer#buffdets.max_zoom-Zoom,
+				    pos={1+BufferZsize div 2,
+					 (1+(BufferXsize div 2))*?DETS_PACK_SIZE},
+				    offset={Zoom-(BufferZsize div 2),
+					    X-(BufferXsize div 2)*?DETS_PACK_SIZE}
+				   }).
+
 
 
 create_buffer(Tab,BufferXsize,BufferZsize,CoreN,Panel,Frame,Max_Zoom,Labels,Width,Zoom_Label,SchedLabels,Scarlet)->

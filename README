@@ -58,8 +58,9 @@ Warning: qijap:print/1 is not supposed to be used a lot of times; it is supposed
 
 ----------------- Graph Keys -----------------
 
-Left/right arrow keys to move left/right
-Numpad -/+ to zoom out/in
+Left/right arrow keys to move left/right (50px)
+Control left/right for 200px, alt left/right for 10px
+Numpad -/+ or up/down to zoom out/in
 Home to return to the first state (aprox. fit the screen)
 
 
