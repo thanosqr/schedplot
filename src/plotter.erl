@@ -100,11 +100,14 @@ form(A,B,U)->
     if (length(AL)==3) or (B==A) ->
 	    lists:concat([AL,U]);
        true->
-
-	    Dec = integer_to_list(round((B-A)*math:pow(10,3-length(AL)))),
-	    Zeroes=lists:map(fun(_)->48 end,lists:seq(length(AL),length(Dec),-1)),
 	    %% 48: ascii code of 0
-	    lists:concat([AL,".",Zeroes,Dec ,U])
+	    case integer_to_list(round((B-A)*math:pow(10,3-length(AL)))) of
+		[48] -> 
+		    lists:concat([AL,U]);
+		Dec ->
+		    Zeroes=lists:map(fun(_)->48 end,lists:seq(length(AL),length(Dec),-1)),
+		    lists:concat([AL,".",Zeroes,Dec ,U])
+	    end
     end.
 
 

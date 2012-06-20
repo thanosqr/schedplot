@@ -22,10 +22,13 @@ if there is a directory with the same name traces will be stored in that directo
 
 Flags:
 no_auto_stop
-		the profiling will not stop when Fun returns but will continue untill qijap:stop/0 is called. note that the profiling will stop if stop/0 is called even if this flag wasnt used.
+	the profiling will not stop when Fun returns but will continue untill qijap:stop/0 is called. note that the profiling will stop if stop/0 is called even if this flag wasnt used.
 
 gc
-		profile and display the garbage collection
+	profile and display the garbage collection
+
+trace_all
+	every procedure on the node will be traced
 
 start()->ok
 starts running the profiler (no function is called)
@@ -45,23 +48,20 @@ view(FolderName)->ok
 displays the analyzed trace. if no name is given, the default name will be used.
 
 
+---------------- Scarlet Notes----------------
+
+Anywhere in the traced program qijap:print(Text) may be called where Text is a string. This will place a red vertical line, with a label displaying Text, at the graph of the shceduler in which the process was running in when qijap:print/1 was called.
+
+Note that the text of labels that are too close may overlap and the vertical line will hide part of the graph.
+
+Warning: qijap:print/1 is not supposed to be used a lot of times; it is supposed to be the equivalent of printing messages during debugging. A lot of calls may consume a significant amount of memory, depending on the size of Text as well as slow down the viewing process.
+
 ----------------- Graph Keys -----------------
 
 Left/right arrow keys to move left/right
 Numpad -/+ to zoom out/in
 Home to return to the first state (aprox. fit the screen)
 
-
------------------ Demo -----------------
-
-1> qijap:start({fib,fib,[28,6]},fib_prof).
-ok
-2> qijap:analyze(fib_prof).
-ok
-3> qijap:view(fib_prof).
-
-fib(N,M) spawns M processes that calculate fib(N) and waits for them to end.
-the result (assuming 6 cores) should be something similar to the pic in others/demo_fib.png
 
 ----------------- Notes -----------------
 
@@ -71,8 +71,6 @@ Monitor memory consumption; sometimes trace messages are produced faster than th
 
 ----------------- Coming Soon -----------------
 
-Tracing of garbage collection
-
-Selective tracing (you can try using erlang:trace_patter/[2-3] but it has not been tested so far)
+Selective tracing (you can try using erlang:trace_pattern/[2-3] but it has not been tested so far)
 
 More user-friendly graph interface
