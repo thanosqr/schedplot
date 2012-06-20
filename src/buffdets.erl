@@ -95,8 +95,6 @@ update(PID,Adj,Old)->
 
 
 create_buffer(Tab,BufferXsize,BufferZsize,CoreN,Panel,Frame,Max_Zoom,Labels,Width,Zoom_Label,SchedLabels,Scarlet)->
-    Xs=10000,
-    Zs = 42,
     %% When the zoom_lvl = Max_Zoom, the whole graph is 1px.
     Zoom=Max_Zoom-trunc(math:log(Width)/math:log(2)), %%zoom_make
     refresh_buffer({0,0},
@@ -109,9 +107,9 @@ create_buffer(Tab,BufferXsize,BufferZsize,CoreN,Panel,Frame,Max_Zoom,Labels,Widt
 			     panel=Panel,
 			     frame=Frame,
 			     left_data=0,
-			     right_data=Xs*Xs,
-			     zoomin_data=Zs*Zs,
-			     zoomout_data=2,
+			     right_data=Width,
+			     zoomin_data=Zoom,
+			     zoomout_data=Max_Zoom-Zoom,
 			     pos={1+BufferZsize div 2,
 				  (1+(BufferXsize div 2))*?DETS_PACK_SIZE},
 			     labels=Labels,
