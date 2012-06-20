@@ -29,7 +29,7 @@ open(FolderName,BufferXsize,BufferZsize,Panel,Frame)->
 	{ok,true} ->
 	    wxStaticText:setLabel(lists:last(SchedLabels), "GC")
     end,
-    Zoom_Label=wxStaticText:new(Frame,?ANY,"",[{pos,{?PWIDTH-48,?PHEIGHT+42}}]),
+    Zoom_Label=wxStaticText:new(Frame,?ANY,"",[{pos,{?PWIDTH-142,?PHEIGHT+42}}]),
     create_buffer(Tab,BufferXsize,BufferZsize,
 		  CoreN,Panel,Frame,Max_Zoom,
 		  Labels,Width,Zoom_Label,
@@ -44,13 +44,11 @@ getData(Datapack)->
 
     if ArrayIndex+Duration =< ?DETS_PACK_SIZE ->
 	    lists:map(fun(CoreData)->
-    io:write({a,From,ArrayID,length(CoreData),ArrayIndex}),io:nl(),
 			      DL=lists:nth(ArrayID,CoreData),
 			      qutils:sublist(DL,ArrayIndex,Duration)
 		      end,lists:nth(ZoomLvl,Data));
        ArrayIndex+Duration > ?DETS_PACK_SIZE ->
 	    lists:map(fun(CoreData)->
-    io:write({a,From,ArrayID,length(CoreData),ArrayIndex}),io:nl(),
 			      lists:append(
 				qutils:sublist(lists:nth(ArrayID,CoreData),
 					       ArrayIndex,
@@ -80,13 +78,11 @@ getData(Datapack)->
 %% ----------------------------------------------------------------------
 
 read(Datapack)->
-io:write(hiii),
     {getData(Datapack),
      case category(Datapack) of
 	 nu ->
 	     Datapack;
 	 Adj ->
-%io:write(kiki),
 	     spawn(?MODULE,update,[self(),Adj,Datapack]),
 	     Datapack#buffdets{mode=update}
      end}.

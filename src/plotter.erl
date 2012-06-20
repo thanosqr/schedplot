@@ -68,10 +68,11 @@ drawGrid(Paint,{ZOffset,XOffset},{ZoomLvl,XPos},Labels)->
     wxDC:setPen(Paint,?LGrey),
     lists:map(fun(X)->
 		      wxDC:drawLine(Paint,{X,0},{X,?PHEIGHT})
-	      end,lists:seq(Width-Offset+?VERTICAL_INT,-Offset,-?VERTICAL_INT)),
+ 	      end,lists:seq(Width-Offset+?VERTICAL_INT,-Offset,-?VERTICAL_INT)),
     lists:map(fun({L,X,N})->
+		      Label_N = ((AbsOffset div ?VERTICAL_INT)+N)*?VERTICAL_INT*ZoomFactor,
 		      wxWindow:move(L,X-20+42,?PHEIGHT+10),
-		      wxStaticText:setLabel(L,label_portray(((AbsOffset div ?VERTICAL_INT)+N)*?VERTICAL_INT*ZoomFactor))
+		      wxStaticText:setLabel(L,label_portray(Label_N))
 	      end, qutils:zip3(Labels,lists:seq(Width-Offset,-Offset,-?VERTICAL_INT))),
     wxDC:setPen(Paint,?DEF_C).
 
@@ -84,15 +85,14 @@ create_labels(Frame,N)->
 label_portray(N)->
     if N==0 ->
 	    form(0,0,"");
-
        N < 1000 ->
 	    form(N,N,"us");
-       N < 1000000 ->
+       N < 1000*1000 ->
 	    form(N div 1000,N/1000, "ms");
-       N < 60000000 ->
-	    form(N div 1000000, N/1000000, "s");
+       N < 60*1000*1000 ->
+	    form(N div (1000*1000), N/(1000*1000), "s");
        true ->
-	    form(N div 60000000, N/60000000, "m")
+	    form(N div (60*1000*1000), N/(60*1000*1000), "m")
     end.
 
 form(A,B,U)->
@@ -100,16 +100,24 @@ form(A,B,U)->
     if (length(AL)==3) or (B==A) ->
 	    lists:concat([AL,U]);
        true->
-	    lists:concat([AL,".",integer_to_list( round((B-A)*math:pow(10,3-length(AL))) ),U])
+
+	    Dec = integer_to_list(round((B-A)*math:pow(10,3-length(AL)))),
+	    Zeroes=lists:map(fun(_)->48 end,lists:seq(length(AL),length(Dec),-1)),
+	    %% 48: ascii code of 0
+	    lists:concat([AL,".",Zeroes,Dec ,U])
     end.
 
 
 scarlet(Paint,L,Z,X)->
     wxDC:setPen(Paint,?Red),
-    lists:map(fun({Time,{SID,_Label}})->
+    wxDC:setFont(Paint,wxFont:new(10,?wxFONTFAMILY_SWISS,?wxFONTSTYLE_NORMAL,
+			    ?wxFONTWEIGHT_NORMAL)),
+    lists:map(fun({Time,{SID,Label}})->
+		      Y= SID*42-?MAX_HEIGHT,
+		      XN = (Time-X) div Z,
 		      wxDC:drawLine(Paint,
-				    {(Time-X) div Z,SID*42-8-?MAX_HEIGHT},
-				    {(Time-X) div Z,SID*42+2})
+				    {XN,Y-(?MAX_HEIGHT div 2)},
+				    {XN,Y+2+?MAX_HEIGHT}),
+		      wxDC:drawLabel(Paint,Label,{XN+2,Y-?MAX_HEIGHT,42,42})
 	      end,L),
-io:nl(),
     wxDC:setPen(Paint,?DEF_C).

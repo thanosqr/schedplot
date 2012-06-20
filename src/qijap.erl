@@ -60,14 +60,15 @@ seq(X)->
 
 derps(X)->
     io:write({X}),io:nl(),
-    qijap:print(0),
+    qijap:print("start"),
     derp(X).
 derp(0)->
-    qijap:print(o),
+    qijap:print("end"),
     ok;
 derp(X)->
-   if X rem 100000 == 0 ->
-	    qijap:print(0);
+    N=1000*1000*2,
+   if X rem N == 0 ->
+	    qijap:print(integer_to_list(X div N));
       true -> ok
    end,
     derp(X-1).

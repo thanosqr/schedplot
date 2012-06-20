@@ -9,7 +9,9 @@
 -define(PANEL_SIZE,6).
 -define(MAX_OFFSET,1000).
 -define(MIN_OFFSET,-1000).
--define(STEP,5).
+-define(STEP_ALT,10).
+-define(STEP_NORM,50).
+-define(STEP_CMD,200).
 -define(CONTROLS,[left_up,mousewheel,left_dclick,key_down,size]).
 
 -define(EXIT,?wxID_EXIT).
@@ -41,9 +43,7 @@ init(FolderName)->
     loop(NDatapack).
 
 draw(Datapack)->
-io:write({Datapack#buffdets.pos,Datapack#buffdets.offset}),io:nl(),
     {Values,NDatapack} = buffdets:read(Datapack),
-
     Paint = wxBufferedPaintDC:new(Datapack#buffdets.panel),
     wxDC:clear(Paint),
     plotter:drawGrid(Paint,NDatapack#buffdets.offset,
@@ -92,18 +92,18 @@ change_state(How,Datapack)->
     case change_decode(How) of
 	resize->
 	    same;
-	left->
-	    if Datapack#buffdets.left_data>=?STEP ->
-		    Datapack#buffdets{pos={ZoomLvl,Xpos-?STEP},
-				      left_data=Datapack#buffdets.left_data-?STEP,
-				      right_data=Datapack#buffdets.right_data+?STEP};
+	{left,Step}->
+	    if Datapack#buffdets.left_data>=Step ->
+		    Datapack#buffdets{pos={ZoomLvl,Xpos-Step},
+				      left_data=Datapack#buffdets.left_data-Step,
+				      right_data=Datapack#buffdets.right_data+Step};
 	       true -> same
 	    end;
-	right->
-	    if Datapack#buffdets.right_data>=?STEP ->
-		    Datapack#buffdets{pos={ZoomLvl,Xpos+?STEP},
-				      left_data=Datapack#buffdets.left_data+?STEP,
-				      right_data=Datapack#buffdets.right_data-?STEP};
+	{right,Step}->
+	    if Datapack#buffdets.right_data>=Step ->
+		    Datapack#buffdets{pos={ZoomLvl,Xpos+Step},
+				      left_data=Datapack#buffdets.left_data+Step,
+				      right_data=Datapack#buffdets.right_data-Step};
 	       true -> same
 	    end;
 	zoom_in->
@@ -143,9 +143,13 @@ change_state(How,Datapack)->
 
 
 update_zoom_label({Z,_},{ZOffset,_},Label)->
+    Zm=round(math:pow(2,Z+ZOffset+?DEF_GU-1)),
     wxStaticText:setLabel(Label,
-			  lists:concat(["Zoom 1:", 
-					integer_to_list(round(math:pow(2,Z+ZOffset+?DEF_GU-1)))])).
+       lists:concat(["Zoom 1:", 
+		     integer_to_list(Zm),
+		    "  [1px = ",
+		    plotter:label_portray(Zm),
+		    "]"])).
 
 
 change_decode(#wx{event=#wxKey{keyCode=?WXK_NUMPAD_ADD}})->
@@ -156,10 +160,18 @@ change_decode(#wx{event=#wxKey{keyCode=?WXK_NUMPAD_SUBTRACT}}) ->
     zoom_out;
 change_decode(#wx{event=#wxKey{keyCode=?WXK_UP}}) ->
     zoom_out;
+change_decode(#wx{event=#wxKey{keyCode=?WXK_LEFT,altDown=true}}) ->
+    {left,?STEP_ALT};
+change_decode(#wx{event=#wxKey{keyCode=?WXK_LEFT,controlDown=true}}) ->
+    {left,?STEP_CMD};
 change_decode(#wx{event=#wxKey{keyCode=?WXK_LEFT}}) ->
-    left;
+    {left,?STEP_NORM};
+change_decode(#wx{event=#wxKey{keyCode=?WXK_RIGHT,altDown=true}}) ->
+    {right,?STEP_ALT};
+change_decode(#wx{event=#wxKey{keyCode=?WXK_RIGHT,controlDown=true}}) ->
+    {right,?STEP_CMD};
 change_decode(#wx{event=#wxKey{keyCode=?WXK_RIGHT}}) ->
-    right;
+    {right,?STEP_NORM};
 change_decode(#wx{event=#wxKey{keyCode=?WXK_HOME}}) ->
     reset;
 change_decode(#wx{event=wxEVT_SIZE}) ->

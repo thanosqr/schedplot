@@ -34,7 +34,7 @@ loop(Messages,T0,FolderName)->
 	    loop([{timer:now_diff(T,T0),Label}|Messages],T0,FolderName)
     end.
 	    
-
+%% TEXT MUST BE STRING
 open(FolderName)->
     F=lists:concat([atom_to_list(FolderName),"/scarlet"]),
     {ok,S}=file:open(F,[read]),
@@ -42,7 +42,6 @@ open(FolderName)->
     dict:from_list(L).
 
 draw(Paint,{ZPos,XPos},{Zoff,Xoff},Width,D)->
-
     Z=round(math:pow(2,ZPos+Zoff+?DEF_GU-1)),  %edit
     X = (XPos+Xoff-?DETS_PACK_SIZE)*Z,
     L=dict:to_list(get_from_to(X,X+Width*Z,D)),

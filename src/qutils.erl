@@ -31,8 +31,6 @@ take_from_tail(N,L)->
 % instead, we want it to return an empty list
 
 sublist(List,Index,Len)->
-
-    io:write({sub,Len,Index}),io:nl(),
 		if length(List) > Index ->
 						lists:sublist(List,Index,Len);
 			 true ->
