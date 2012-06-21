@@ -43,9 +43,17 @@ init(FolderName)->
     loop(NDatapack).
 
 draw(Datapack)->
-    {Values,NDatapack} = buffdets:read(Datapack),
-    Paint = wxBufferedPaintDC:new(Datapack#buffdets.panel),
+    Paint = wxBufferedPaintDC:new(Datapack#buffdets.panel),    
     wxDC:clear(Paint),
+    NDatapack=draw(Datapack,Paint),
+    wxBufferedPaintDC:destroy(Paint),
+    update_zoom_label(NDatapack#buffdets.pos,
+		      NDatapack#buffdets.offset,
+		      NDatapack#buffdets.zoom_label),
+    NDatapack.
+
+draw(Datapack,Paint)->
+    {Values,NDatapack} = buffdets:read(Datapack),
     plotter:drawGrid(Paint,NDatapack#buffdets.offset,
 		     NDatapack#buffdets.pos,
 		     NDatapack#buffdets.labels),
@@ -55,12 +63,8 @@ draw(Datapack)->
 		 NDatapack#buffdets.offset,
 		 NDatapack#buffdets.width,
 		 NDatapack#buffdets.scarlet),
-    wxBufferedPaintDC:destroy(Paint),
-    update_zoom_label(NDatapack#buffdets.pos,
-		      NDatapack#buffdets.offset,
-		      NDatapack#buffdets.zoom_label),
     NDatapack.
-
+    
 
 loop(Datapack)->
 
@@ -137,6 +141,24 @@ change_state(How,Datapack)->
 				   Datapack#buffdets.schedlabels,
 				   Datapack#buffdets.scarlet
 				  );
+	print->
+	    %% {_,_,T}=erlang:now(),
+	    %% N=lists:concat([atom_to_list(print),integer_to_list(T),atom_to_list('.bmp')]),
+	    %% B = wxBitmap:new(Datapack#buffdets.width,
+	    %% 		    ?PHEIGHT),
+	    %% M = wxMemoryDC:new(),
+	    %% wxMemoryDC:selectObject(M,B),
+	    %% P = wxPaintDC:new(Datapack#buffdets.panel),
+	    %% draw(Datapack,P),
+	    %% wxDC:setLogicalFunction(P,?wxCOPY),
+	    %% wxDC:setLogicalFunction(M,?wxCOPY),
+	    %% wxDC:blit(M,{0,0},{Datapack#buffdets.width,?PHEIGHT},P,{0,0}),
+	    %% wxBitmap:saveFile(B,N,?wxBITMAP_TYPE_GIF),
+	    %% wxMemoryDC:destroy(M),
+	    %% wxBitmap:destroy(B),
+	    %% io:format("screenshot saved\n"),
+	    same;
+	    
 	same->
 	    same
     end.
@@ -176,5 +198,7 @@ change_decode(#wx{event=#wxKey{keyCode=?WXK_HOME}}) ->
     reset;
 change_decode(#wx{event=wxEVT_SIZE}) ->
     resize;
+change_decode(#wx{event=#wxKey{keyCode=80}})->
+    print;
 change_decode(_) ->
     same.
