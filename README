@@ -1,4 +1,4 @@
-Very early stages of development
+Early stages of development
 
 ----------------- Compiling -----------------
 
@@ -48,7 +48,7 @@ view(FolderName)->ok
 displays the analyzed trace. if no name is given, the default name will be used.
 
 
----------------- Scarlet Notes----------------
+------------------- Labels -------------------
 
 Anywhere in the traced program qijap:print(Text) may be called where Text is a string. This will place a red vertical line, with a label displaying Text, at the graph of the shceduler in which the process was running in when qijap:print/1 was called.
 
