@@ -156,20 +156,20 @@ change_state(How,Datapack)->
 				   Datapack#buffdets.schedlabels,
 				   Datapack#buffdets.scarlet
 				  );
-	core_up->
+	{core_up,CN}->
 	    FromCore = Datapack#buffdets.fromCore,
-	    if FromCore>0 ->
-		    hide_extra_sched_labels(FromCore-1,Datapack#buffdets.schedlabels),
-		    Datapack#buffdets{fromCore=FromCore-1};
+	    if FromCore-CN>=0 ->
+		    hide_extra_sched_labels(FromCore-CN,Datapack#buffdets.schedlabels),
+		    Datapack#buffdets{fromCore=FromCore-CN};
 	       true->
 		    same
 	    end;
-	core_down->
+	{core_down,CN}->
 	    FromCore = Datapack#buffdets.fromCore,
 	    {_,_,CoreN} = Datapack#buffdets.static,
-	    if FromCore<CoreN-1->
-		    hide_extra_sched_labels(FromCore+1,Datapack#buffdets.schedlabels),
-		    Datapack#buffdets{fromCore=FromCore+1};
+	    if FromCore+CN<CoreN->
+		    hide_extra_sched_labels(FromCore+CN,Datapack#buffdets.schedlabels),
+		    Datapack#buffdets{fromCore=FromCore+CN};
 	       true->
 		    same
 	    end;
@@ -232,10 +232,14 @@ change_decode(#wx{event=#wxKey{keyCode=?WXK_RIGHT}}) ->
     {right,?STEP_NORM};
 change_decode(#wx{event=#wxKey{keyCode=?WXK_HOME}}) ->
     reset;
-change_decode(#wx{event=#wxKey{keyCode=?WXK_UP}}) ->
-    core_up;
-change_decode(#wx{event=#wxKey{keyCode=?WXK_DOWN}}) ->
-    core_down;
+change_decode(#wx{event=#wxKey{keyCode=?WXK_UP,altDown=true}}) ->
+    {core_up,10};
+change_decode(#wx{event=#wxKey{keyCode=?WXK_DOWN,altDown=true}}) ->
+    {core_down,10};
+change_decode(#wx{event=#wxKey{keyCode=?WXK_UP,altDown=false}}) ->
+    {core_up,1};
+change_decode(#wx{event=#wxKey{keyCode=?WXK_DOWN,altDown=false}}) ->
+    {core_down,1};
 change_decode(#wx{event=#wxSize{size={W,H}}}) ->
     {resize,W,H};
 change_decode(#wx{event=#wxKey{keyCode=80}})->

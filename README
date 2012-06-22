@@ -58,15 +58,11 @@ Warning: qijap:print/1 is not supposed to be used a lot of times; it is supposed
 
 ----------------- Graph Keys -----------------
 
-Left/right arrow keys to move left/right (50px)
-Control left/right for 200px, alt left/right for 10px
-Numpad -/+ or up/down to zoom out/in
+Left/right arrow to move left/right (50px)
+Control left/right arrow for 200px, alt left/right arrow for 10px
+(Alt) up/down arrow to move 1 (10) core up/down
+Regular or numpad -/+ (as well as _/=) to zoom out/in
 Home to return to the first state (aprox. fit the screen)
 
 
------------------ Notes -----------------
-
-Resizing the window or exiting and restarting might result in a grey window; click or move left/right to instantiate it (resizing the window is not suggested)
-
-Monitor memory consumption; sometimes trace messages are produced faster than they can be stored.
 
