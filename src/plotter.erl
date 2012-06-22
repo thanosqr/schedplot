@@ -51,13 +51,17 @@ drawCoreLine(Paint,Lengths,Yo,PWidth)->
     wxDC:setPen(Paint,?DEF_C),
     drawLines(Paint,Lengths,0,Yo).
 
-drawCoreLines(Paint,CLs,SLs,PWidth)->
-    drawCoreLines(Paint,CLs,42,SLs,PWidth).
-drawCoreLines(_,[],_,_,_)->ok;
-drawCoreLines(Paint,[CL|CLs],Y,[SL|SLs],PWidth)->
+drawCoreLines(Paint,CLs,SLs,PWidth,PHeight)->
+    drawCoreLines(Paint,CLs,42,SLs,PWidth,PHeight).
+drawCoreLines(_,[],_,_,_,_)->ok;
+drawCoreLines(Paint,[CL|CLs],Y,[SL|SLs],PWidth,PHeight)->
     drawCoreLine(Paint,CL,Y,PWidth),
-    wxWindow:move(SL,8,Y-18),
-    drawCoreLines(Paint,CLs,Y+42,SLs,PWidth).
+    if Y-?MAX_HEIGHT<PHeight->
+	    wxWindow:move(SL,8,Y-18);
+       true->
+	    wxWindow:move(SL,-42,-42)
+    end,
+    drawCoreLines(Paint,CLs,Y+42,SLs,PWidth,PHeight).
 
 drawGrid(Paint,{ZOffset,XOffset},{ZoomLvl,XPos},Labels,PHeight,PWidth)->
     ZoomFactor = round(math:pow(2,ZoomLvl+ZOffset+?DEF_GU-1)), %edit
