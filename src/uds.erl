@@ -66,9 +66,11 @@ draw(Datapack,Paint)->
 		     NDatapack#buffdets.height+?PH_DIFF,
 		     NDatapack#buffdets.width+?PW_DIFF),
     plotter:drawCoreLines(Paint,Values,
-			  NDatapack#buffdets.schedlabels,
+			  lists:nthtail(NDatapack#buffdets.fromCore,
+					NDatapack#buffdets.schedlabels),
 			  NDatapack#buffdets.width+?PW_DIFF),
     scarlet:draw(Paint,
+		 NDatapack#buffdets.fromCore,
 		 NDatapack#buffdets.pos,
 		 NDatapack#buffdets.offset,
 		 NDatapack#buffdets.width,
@@ -154,6 +156,23 @@ change_state(How,Datapack)->
 				   Datapack#buffdets.schedlabels,
 				   Datapack#buffdets.scarlet
 				  );
+	core_up->
+	    FromCore = Datapack#buffdets.fromCore,
+	    if FromCore>0 ->
+		    hide_extra_sched_labels(FromCore-1,Datapack#buffdets.schedlabels),
+		    Datapack#buffdets{fromCore=FromCore-1};
+	       true->
+		    same
+	    end;
+	core_down->
+	    FromCore = Datapack#buffdets.fromCore,
+	    {_,_,CoreN} = Datapack#buffdets.static,
+	    if FromCore<CoreN-1->
+		    hide_extra_sched_labels(FromCore+1,Datapack#buffdets.schedlabels),
+		    Datapack#buffdets{fromCore=FromCore+1};
+	       true->
+		    same
+	    end;
 	print->
 	    %% {_,_,T}=erlang:now(),
 	    %% N=lists:concat([atom_to_list(print),integer_to_list(T),atom_to_list('.bmp')]),
@@ -186,14 +205,18 @@ update_zoom_label({Z,_},{ZOffset,_},Label,W,H)->
 		    plotter:label_portray(Zm),
 		    "]"])).
 
+hide_extra_sched_labels(0,_)->ok;
+hide_extra_sched_labels(FromCore,[L|Ls])->
+    wxWindow:move(L,-42,-42),
+    hide_extra_sched_labels(FromCore-1,Ls).
 
 change_decode(#wx{event=#wxKey{keyCode=?WXK_NUMPAD_ADD}})->
     zoom_in;
-change_decode(#wx{event=#wxKey{keyCode=?WXK_DOWN}}) ->
+change_decode(#wx{event=#wxKey{keyCode=61}}) ->
     zoom_in;
 change_decode(#wx{event=#wxKey{keyCode=?WXK_NUMPAD_SUBTRACT}}) ->
     zoom_out;
-change_decode(#wx{event=#wxKey{keyCode=?WXK_UP}}) ->
+change_decode(#wx{event=#wxKey{keyCode=45}}) ->
     zoom_out;
 change_decode(#wx{event=#wxKey{keyCode=?WXK_LEFT,altDown=true}}) ->
     {left,?STEP_ALT};
@@ -209,6 +232,10 @@ change_decode(#wx{event=#wxKey{keyCode=?WXK_RIGHT}}) ->
     {right,?STEP_NORM};
 change_decode(#wx{event=#wxKey{keyCode=?WXK_HOME}}) ->
     reset;
+change_decode(#wx{event=#wxKey{keyCode=?WXK_UP}}) ->
+    core_up;
+change_decode(#wx{event=#wxKey{keyCode=?WXK_DOWN}}) ->
+    core_down;
 change_decode(#wx{event=#wxSize{size={W,H}}}) ->
     {resize,W,H};
 change_decode(#wx{event=#wxKey{keyCode=80}})->

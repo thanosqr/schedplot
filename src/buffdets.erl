@@ -13,15 +13,18 @@ open(FolderName,Panel,Frame)->
 
 open(FolderName,BufferXsize,BufferZsize,Panel,Frame)->
     Width=?WIDTH,
-    {ok,Tab} = dets:open_file(lists:concat([atom_to_list(FolderName),"/analyzed_trace"]),
+    {ok,Tab} = dets:open_file(lists:concat([atom_to_list(FolderName),
+					    "/analyzed_trace"]),
 			      [{access,read}]),
     [{init_state,Max_Zoom,CoreN}]=dets:lookup(Tab,init_state),
     Labels=plotter:create_labels(Frame,?LABEL_N),
     SchedLabels=plotter:create_labels(Frame,CoreN-1),
     lists:map(fun({X,L})->
-		      wxStaticText:setLabel(L, lists:concat(["S",integer_to_list(X)]))
+		      wxStaticText:setLabel(L, 
+			 lists:concat(["S",integer_to_list(X)]))
 	      end, lists:zip(lists:seq(1,CoreN),SchedLabels)),
-    {ok,S}=file:open(lists:concat([atom_to_list(FolderName),"/trace_gabi_header"]),read),
+    {ok,S}=file:open(lists:concat([atom_to_list(FolderName),
+				   "/trace_gabi_header"]),read),
     io:read(S,''),
     case io:read(S,'') of
 	{ok,false} ->
@@ -29,7 +32,8 @@ open(FolderName,BufferXsize,BufferZsize,Panel,Frame)->
 	{ok,true} ->
 	    wxStaticText:setLabel(lists:last(SchedLabels), "GC")
     end,
-    Zoom_Label=wxStaticText:new(Frame,?ANY,"",[{pos,{?PWIDTH+?ZLW,?PHEIGHT+?ZLH}}]),
+    Zoom_Label=wxStaticText:new(Frame,?ANY,"",
+				[{pos,{?PWIDTH+?ZLW,?PHEIGHT+?ZLH}}]),
     create_buffer(Tab,BufferXsize,BufferZsize,
 		  CoreN,Panel,Frame,Max_Zoom,
 		  Labels,Width,Zoom_Label,
@@ -78,7 +82,8 @@ getData(Datapack)->
 %% ----------------------------------------------------------------------
 
 read(Datapack)->
-    {getData(Datapack),
+    {lists:nthtail(Datapack#buffdets.fromCore,
+		   getData(Datapack)),
      case category(Datapack) of
 	 nu ->
 	     Datapack;

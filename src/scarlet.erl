@@ -41,12 +41,12 @@ open(FolderName)->
     {ok,L}=io:read(S,''),
     dict:from_list(L).
 
-draw(Paint,{ZPos,XPos},{Zoff,Xoff},Width,D)->
+draw(Paint,FromCore,{ZPos,XPos},{Zoff,Xoff},Width,D)->
     Z=round(math:pow(2,ZPos+Zoff+?DEF_GU-1)),  %edit
     X = (XPos+Xoff-?DETS_PACK_SIZE)*Z,
     L=dict:to_list(get_from_to(X,X+Width*Z,D)),
 %    io:write({X,Z,X+Width*Z,length(L)}),io:nl(),
-    plotter:scarlet(Paint,L,Z,X).
+    plotter:scarlet(Paint,FromCore,L,Z,X).
     
 
 get_from_to(X1,X2,D)->

@@ -108,16 +108,20 @@ get_N_dec(_,0)->[];
 get_N_dec(R,N)->
     [trunc(R*10)+48|get_N_dec(R*10-trunc(R*10),N-1)].
 
-scarlet(Paint,L,Z,X)->
+scarlet(Paint,FromCore,L,Z,X)->
     wxDC:setPen(Paint,?Red),
     wxDC:setFont(Paint,wxFont:new(10,?wxFONTFAMILY_SWISS,?wxFONTSTYLE_NORMAL,
 			    ?wxFONTWEIGHT_NORMAL)),
     lists:map(fun({Time,{SID,Label}})->
-		      Y= SID*42-?MAX_HEIGHT,
-		      XN = (Time-X) div Z,
-		      wxDC:drawLine(Paint,
-				    {XN,Y-(?MAX_HEIGHT div 2)},
-				    {XN,Y+2+?MAX_HEIGHT}),
-		      wxDC:drawLabel(Paint,Label,{XN+2,Y-?MAX_HEIGHT,42,42})
+		      if SID>FromCore ->
+			      Y= (SID-FromCore)*42-?MAX_HEIGHT,
+			      XN = (Time-X) div Z,
+			      wxDC:drawLine(Paint,
+					    {XN,Y-(?MAX_HEIGHT div 2)},
+					    {XN,Y+2+?MAX_HEIGHT}),
+			      wxDC:drawLabel(Paint,Label,{XN+2,Y-?MAX_HEIGHT,42,42});
+			 true ->
+			      ok
+		      end
 	      end,L),
     wxDC:setPen(Paint,?DEF_C).
