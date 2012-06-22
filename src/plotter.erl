@@ -44,36 +44,35 @@ drawLines(Paint,[Length|Lengths],X,Yo)->
 dl(Paint,X,Yo,Length)->
     wxDC:drawLine(Paint,{X,Yo},{X,Yo-?HEIGHT_FACTOR*Length}).
 
-drawCoreLine(Paint,Lengths,Yo)->
+drawCoreLine(Paint,Lengths,Yo,PWidth)->
     wxDC:setPen(Paint,?Grey),
-    wxDC:drawLine(Paint,{0,Yo},{1000,Yo}),
-    wxDC:drawLine(Paint,{0,Yo-?MAX_HEIGHT},{1000,Yo-?MAX_HEIGHT}),
+    wxDC:drawLine(Paint,{0,Yo},{PWidth,Yo}),
+    wxDC:drawLine(Paint,{0,Yo-?MAX_HEIGHT},{PWidth,Yo-?MAX_HEIGHT}),
     wxDC:setPen(Paint,?DEF_C),
     drawLines(Paint,Lengths,0,Yo).
 
-drawCoreLines(Paint,CLs,SLs)->
-    drawCoreLines(Paint,CLs,42,SLs).
-drawCoreLines(_,[],_,_)->ok;
-drawCoreLines(Paint,[CL|CLs],Y,[SL|SLs])->
-    drawCoreLine(Paint,CL,Y),
+drawCoreLines(Paint,CLs,SLs,PWidth)->
+    drawCoreLines(Paint,CLs,42,SLs,PWidth).
+drawCoreLines(_,[],_,_,_)->ok;
+drawCoreLines(Paint,[CL|CLs],Y,[SL|SLs],PWidth)->
+    drawCoreLine(Paint,CL,Y,PWidth),
     wxWindow:move(SL,8,Y-18),
-    drawCoreLines(Paint,CLs,Y+42,SLs).
+    drawCoreLines(Paint,CLs,Y+42,SLs,PWidth).
 
-drawGrid(Paint,{ZOffset,XOffset},{ZoomLvl,XPos},Labels)->
+drawGrid(Paint,{ZOffset,XOffset},{ZoomLvl,XPos},Labels,PHeight,PWidth)->
     ZoomFactor = round(math:pow(2,ZoomLvl+ZOffset+?DEF_GU-1)), %edit
-    Width=1000,
     AbsOffset = XOffset+XPos-?DETS_PACK_SIZE,
 
     Offset=AbsOffset rem ?VERTICAL_INT,
     wxDC:setPen(Paint,?LGrey),
     lists:map(fun(X)->
-		      wxDC:drawLine(Paint,{X,0},{X,?PHEIGHT})
- 	      end,lists:seq(Width-Offset+?VERTICAL_INT,-Offset,-?VERTICAL_INT)),
+		      wxDC:drawLine(Paint,{X,0},{X,PHeight})
+ 	      end,lists:seq(-Offset,PWidth-Offset+?VERTICAL_INT,?VERTICAL_INT)),
     lists:map(fun({L,X,N})->
 		      Label_N = ((AbsOffset div ?VERTICAL_INT)+N)*?VERTICAL_INT*ZoomFactor,
-		      wxWindow:move(L,X-20+42,?PHEIGHT+10),
+		      wxWindow:move(L,X+21,PHeight+10),
 		      wxStaticText:setLabel(L,label_portray(Label_N))
-	      end, qutils:zip3(Labels,lists:seq(Width-Offset,-Offset,-?VERTICAL_INT))),
+	      end, qutils:zip3(Labels,lists:seq(-Offset,PWidth-Offset,?VERTICAL_INT))),
     wxDC:setPen(Paint,?DEF_C).
 
 create_labels(Frame,N)->

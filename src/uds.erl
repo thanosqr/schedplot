@@ -31,16 +31,20 @@ init(FolderName)->
     wxMenuBar:append(MenuBar,File,"&File"),
     wxFrame:setMenuBar(Frame,MenuBar),
     wxFrame:show(Frame),  
-
-    Panel=wxPanel:new(Frame,[{size,{?PWIDTH,?PHEIGHT}},{pos,{42,0}}]),
-    lists:map(fun(XX)->
-		      wxEvtHandler:connect(Panel,XX) 
-	      end, ?CONTROLS),
+    Panel=create_panel(Frame,?PWIDTH,?PHEIGHT),
     wxFrame:connect(Frame,command_menu_selected),
+    wxFrame:connect(Frame,size),
     %%wxFrame:connect(Frame,close_window),
     Datapack=buffdets:open(FolderName,Panel,Frame),
     NDatapack=draw(Datapack),
     loop(NDatapack).
+
+create_panel(Frame,W,H)->
+    Panel=wxPanel:new(Frame,[{size,{W,H}},{pos,{42,0}}]),
+    lists:map(fun(XX)->
+		      wxEvtHandler:connect(Panel,XX) 
+	      end, ?CONTROLS),
+    Panel.
 
 draw(Datapack)->
     Paint = wxBufferedPaintDC:new(Datapack#buffdets.panel),    
@@ -49,15 +53,21 @@ draw(Datapack)->
     wxBufferedPaintDC:destroy(Paint),
     update_zoom_label(NDatapack#buffdets.pos,
 		      NDatapack#buffdets.offset,
-		      NDatapack#buffdets.zoom_label),
+		      NDatapack#buffdets.zoom_label,
+		      NDatapack#buffdets.width,
+		      NDatapack#buffdets.height),
     NDatapack.
 
 draw(Datapack,Paint)->
     {Values,NDatapack} = buffdets:read(Datapack),
     plotter:drawGrid(Paint,NDatapack#buffdets.offset,
 		     NDatapack#buffdets.pos,
-		     NDatapack#buffdets.labels),
-    plotter:drawCoreLines(Paint,Values,NDatapack#buffdets.schedlabels),
+		     NDatapack#buffdets.labels,
+		     NDatapack#buffdets.height+?PH_DIFF,
+		     NDatapack#buffdets.width+?PW_DIFF),
+    plotter:drawCoreLines(Paint,Values,
+			  NDatapack#buffdets.schedlabels,
+			  NDatapack#buffdets.width+?PW_DIFF),
     scarlet:draw(Paint,
 		 NDatapack#buffdets.pos,
 		 NDatapack#buffdets.offset,
@@ -67,7 +77,6 @@ draw(Datapack,Paint)->
     
 
 loop(Datapack)->
-
     receive
 	?QUIT->
 	    wxWindow:close(Datapack#buffdets.frame,[]),
@@ -94,8 +103,12 @@ change_state(How,Datapack)->
     {ZoomLvl,Xpos} = Datapack#buffdets.pos,
     {_,Xoff} = Datapack#buffdets.offset,
     case change_decode(How) of
-	resize->
-	    same;
+	{resize,W,H}->
+	    wxPanel:destroy(Datapack#buffdets.panel),
+	    Datapack#buffdets{width=W,
+			      height=H,
+			      panel=create_panel(Datapack#buffdets.frame,
+						 W+?PW_DIFF,H+?PH_DIFF)};
 	{left,Step}->
 	    if Datapack#buffdets.left_data>=Step ->
 		    Datapack#buffdets{pos={ZoomLvl,Xpos-Step},
@@ -158,14 +171,14 @@ change_state(How,Datapack)->
 	    %% wxBitmap:destroy(B),
 	    %% io:format("screenshot saved\n"),
 	    same;
-	    
 	same->
 	    same
     end.
 
 
-update_zoom_label({Z,_},{ZOffset,_},Label)->
+update_zoom_label({Z,_},{ZOffset,_},Label,W,H)->
     Zm=round(math:pow(2,Z+ZOffset+?DEF_GU-1)),
+    wxWindow:move(Label,W+?ZLW,H+?ZLH),
     wxStaticText:setLabel(Label,
        lists:concat(["Zoom 1:", 
 		     integer_to_list(Zm),
@@ -196,8 +209,8 @@ change_decode(#wx{event=#wxKey{keyCode=?WXK_RIGHT}}) ->
     {right,?STEP_NORM};
 change_decode(#wx{event=#wxKey{keyCode=?WXK_HOME}}) ->
     reset;
-change_decode(#wx{event=wxEVT_SIZE}) ->
-    resize;
+change_decode(#wx{event=#wxSize{size={W,H}}}) ->
+    {resize,W,H};
 change_decode(#wx{event=#wxKey{keyCode=80}})->
     print;
 change_decode(_) ->

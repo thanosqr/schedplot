@@ -1,4 +1,3 @@
-
 -include_lib("wx/include/wx.hrl").
 -define(DETS_PACK_SIZE,4096).
 
@@ -19,7 +18,11 @@
 -define(PHEIGHT,?HEIGHT-100).
 -define(PWIDTH,1000).
 -define(WIDTH,?PWIDTH+84).
-
+-define(PW_DIFF,84).
+-define(PH_DIFF,-100).
+-define(ZLW,-342).
+-define(ZLH,-60).
+-define(LABEL_N,100).
 % GU = math:pow(2,DEF_GU) but used in guards
 -record(buffdets, {data,
 		   tab,
@@ -31,7 +34,8 @@
 		   lx,
 		   uz,
 		   lz,
-		   width=1000,
+		   width=?WIDTH,
+		   height=?HEIGHT,
 		   panel,
 		   frame,
 		   left_data=0,

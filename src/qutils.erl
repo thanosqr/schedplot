@@ -41,7 +41,7 @@ zip3(A,B)->
 	lists:zip3(
 	  lists:sublist(A,length(B)),
 	  lists:sublist(B,length(A)),
-	  lists:seq(min(length(A),length(B))-1,0,-1)
+	  lists:reverse(lists:seq(min(length(A),length(B))-1,0,-1))
 	 ).
 
 reregister(Name,PID)->
