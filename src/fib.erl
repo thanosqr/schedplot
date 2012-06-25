@@ -13,8 +13,7 @@ fib_w(PID,N)->
     qijap:print(pid_to_list(self())),
 	fib(N),
     qijap:print(pid_to_list(self())),
-    %io:write({fib(N)}),
-	PID!ok.
+    PID!ok.
 
 fib(N,M)->
 	lists:map(fun(_)->

@@ -46,10 +46,10 @@ encode([])-><<0:8>>;
 encode(L)->
     case get_same(L) of
 	{T,1,H}->
-%	    <<H:8, (encode(T))/binary>>;
+						%	    <<H:8, (encode(T))/binary>>;
 	    <<0:1,H:7, (encode(T))/binary>>;
 	{T,N,H} ->
-%	    <<H:8,N:8, (encode(T))/binary>>
+						%	    <<H:8,N:8, (encode(T))/binary>>
 	    <<1:1,H:7,N:8, (encode(T))/binary>>
     end.
 
@@ -73,7 +73,6 @@ test(N)->
 		end,lists:seq(1,4096)),
     {ok,T}=dets:open_file(lala,[]),
     DL=encode(L),
-    io:write({l,length(zoom_out(DL))}),io:nl(),
     A=erlang:now(),
     lists:map(fun(X)->
 		      dets:insert(T,{X,L})
@@ -108,7 +107,7 @@ test(N)->
     G=erlang:now(),
     lists:map(fun(_)->
 		      decode(DL)
-%		      zoom_out(L)
+						%		      zoom_out(L)
 	      end,Keys),
     H=erlang:now(),
     io:write({t,
@@ -139,21 +138,16 @@ zo([0])->
 zo([H,0])->
     zo([H,0,0]);
 zo([H1,H2|T])->
-if is_integer(H1)->
-	ok;
-   true ->
-	io:write({H1})
-end,
     <<B:1,H:7>> = <<H1:8>>,
     if B==0 ->
 	    <<B2:1,H22:7>> = <<H2:8>>,
 	    <<0:1,((H+H22) div 2):7,
-	     (if B2==0 ->
-		     zo(T);
-		B2==1->
-		     [N|TT]=T,
-		     zoN(H22,N-1,TT)
-	     end)/binary>>;
+	      (if B2==0 ->
+		       zo(T);
+		  B2==1->
+		       [N|TT]=T,
+		       zoN(H22,N-1,TT)
+	       end)/binary>>;
 
        B==1->
 	    zoN(H,H2,T)
@@ -166,8 +160,8 @@ zoN(H,1,T) ->
 zoN(H,N,T) ->
     <<HN:7,R:1>> = <<N:8>>,
     <<1:1,H:7,HN:8,( if R==1 ->
-				   zo([H|T]);
-			      R==0 ->
-				   zo(T)
-			   end)/binary>>.
-	
+			     zo([H|T]);
+			R==0 ->
+			     zo(T)
+		     end)/binary>>.
+

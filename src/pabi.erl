@@ -90,14 +90,6 @@ store(S)->
 %%%%     B=term_to_binary({P1,P2}),
 %%%%     {B,F,P}.
 encode({PID,in,MFAin,TimeIn},{PID,out,MFAout,TimeOut},Famdict,PrevTime)->
-%{ok,S}=dets:open_file(bolek,[]),
-%    dets:insert(S,{{self(),TimeIn},TimeOut,PID}),
-    %%Top=timer:now_diff(TimeOut,TimeIn),
-    %% if Top>1000->
-    %% 	    io:write({Top});
-    %%    true->
-    %% 	    ok
-    %% end,
     case Famdict of
 	42 -> 
 	    Fo = 0,
@@ -116,7 +108,7 @@ encode({PID,in,MFAin,TimeIn},{PID,out,MFAout,TimeOut},Famdict,PrevTime)->
     {[DurationBytes,TimeBytes,PIDbytes,MFAbytes],NFamdict,NPrevTime};
 
 encode({_PID1,in,_MFA1,_T1},{_PID2,out,_MFA2,_T2},F,P) ->
-%    io:write('#--diff PID error--'),io:nl(),
+%   --diff PID error--
     {<<0:8>>,F,P}.
 
 
