@@ -51,7 +51,8 @@ draw(Datapack)->
     wxDC:clear(Paint),
     NDatapack=draw(Datapack,Paint),
     wxBufferedPaintDC:destroy(Paint),
-    update_zoom_label(NDatapack#buffdets.pos,
+    update_zoom_label(NDatapack#buffdets.static,
+		      NDatapack#buffdets.pos,
 		      NDatapack#buffdets.offset,
 		      NDatapack#buffdets.zoom_label,
 		      NDatapack#buffdets.width,
@@ -198,15 +199,17 @@ change_state(How,Datapack)->
     end.
 
 
-update_zoom_label({Z,_},{ZOffset,_},Label,W,H)->
+update_zoom_label({_,_,CoreN},{Z,_},{ZOffset,_},Label,W,H)->
     Zm=round(math:pow(2,Z+ZOffset+?DEF_GU-1)),
     wxWindow:move(Label,W+?ZLW,H+?ZLH),
     wxStaticText:setLabel(Label,
-       lists:concat(["Zoom 1:", 
-		     integer_to_list(Zm),
-		    "  [1px = ",
-		    plotter:label_portray(Zm),
-		    "]"])).
+	  lists:concat(["Zoom 1:", 
+			integer_to_list(Zm),
+			"  [1px = ",
+			plotter:label_portray(Zm),
+			"]",
+			"  Cores: ",
+			integer_to_list(CoreN)])).
 
 hide_extra_sched_labels(0,_)->ok;
 hide_extra_sched_labels(FromCore,[L|Ls])->

@@ -20,7 +20,7 @@
 -define(WIDTH,?PWIDTH+84).
 -define(PW_DIFF,84).
 -define(PH_DIFF,-100).
--define(ZLW,-342).
+-define(ZLW,-420).
 -define(ZLH,-60).
 -define(LABEL_N,100).
 % GU = math:pow(2,DEF_GU) but used in guards
