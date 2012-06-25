@@ -13,10 +13,19 @@ open(FolderName,Panel,Frame)->
 
 open(FolderName,BufferXsize,BufferZsize,Panel,Frame)->
     Width=?WIDTH,
-    {ok,Tab} = dets:open_file(lists:concat([atom_to_list(FolderName),
-					    "/analyzed_trace"]),
-			      [{access,read}]),
-    [{init_state,Max_Zoom,CoreN}]=dets:lookup(Tab,init_state),
+    {ok,HTab} = dets:open_file(
+		 lists:concat([atom_to_list(FolderName),
+			       "/analyzed_trace1"]),
+		  [{access,read}]),
+    [{init_state,Max_Zoom,CoreN}]=dets:lookup(HTab,init_state),
+    TTabs=lists:map(fun(CoreID)->
+			    {ok,Tab} = dets:open_file(
+					 lists:concat([atom_to_list(FolderName),
+						       "/analyzed_trace",
+						       integer_to_list(CoreID)]),
+					 [{access,read}]),
+			    Tab end, lists:seq(2,CoreN)),
+    Tabs = [HTab|TTabs],
     Labels=plotter:create_labels(Frame,?LABEL_N),
     SchedLabels=plotter:create_labels(Frame,CoreN-1),
     lists:map(fun({X,L})->
@@ -34,7 +43,7 @@ open(FolderName,BufferXsize,BufferZsize,Panel,Frame)->
     end,
     Zoom_Label=wxStaticText:new(Frame,?ANY,"",
 				[{pos,{?PWIDTH+?ZLW,?PHEIGHT+?ZLH}}]),
-    create_buffer(Tab,BufferXsize,BufferZsize,
+    create_buffer(Tabs,BufferXsize,BufferZsize,
 		  CoreN,Panel,Frame,Max_Zoom,
 		  Labels,Width,Zoom_Label,
 		  SchedLabels,scarlet:open(FolderName)).
@@ -140,7 +149,7 @@ create_buffer(Tab,BufferXsize,BufferZsize,CoreN,Panel,Frame,Max_Zoom,Labels,Widt
 			    }).	
 
 refresh_buffer({Zadj,Xadj},Old)->
-    {BufferXsize,BufferZsize,CoreN} = Old#buffdets.static,
+    {BufferXsize,BufferZsize,_CoreN} = Old#buffdets.static,
     {Zoffset,Xoffset} = Old#buffdets.offset,
     {Z,X} = Old#buffdets.pos,
     ZoomStart = Zoffset+Zadj,
@@ -148,7 +157,7 @@ refresh_buffer({Zadj,Xadj},Old)->
     XStart = (Xoffset+Xadj) div ?DETS_PACK_SIZE,
     XEnd = XStart+BufferXsize,
     Data = get_from_dets(ZoomStart,ZoomEnd,XStart,XEnd,
-			 CoreN,Old#buffdets.tab),
+			 Old#buffdets.tab),
     Old#buffdets{data=Data,
 		 lz=2,
 		 uz=BufferZsize-1,
@@ -158,16 +167,17 @@ refresh_buffer({Zadj,Xadj},Old)->
 		 pos={Z-Zadj,X-Xadj}
 		}.
 
-get_from_dets(ZoomStart,ZoomEnd,XStart,XEnd,CoreN,Tab)->
+get_from_dets(ZoomStart,ZoomEnd,XStart,XEnd,Tabs)->
     lists:map(fun(Zoom)->
-      lists:map(fun(CoreID)->
+      lists:map(fun(Tab)->
 	lists:map(fun(X)->
-	  case dets:match(Tab,{{CoreID,Zoom,X},'$1'}) of
-	    [[Values]] ->Values;
-	    [] ->[]
-	  end
+			  cets:lookup(Tab,{Zoom,X})
+	  %% case cets:lookup(Tab,{Zoom,X}) of
+	  %%     [[Values]] ->Values;
+	  %%     [] ->[]
+	  %% end
 	end, lists:seq(XStart,XEnd))
-       end,lists:seq(1,CoreN))
+       end,Tabs)
      end,lists:seq(ZoomStart,ZoomEnd)).
 
 

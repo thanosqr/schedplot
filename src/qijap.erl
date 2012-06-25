@@ -70,15 +70,15 @@ seq(X)->
     start({?MODULE,derps,[X*1000*1000]},[]).
 
 derps(X)->
-    qijap:print("start"),
+%    qijap:print("start"),
     derp(X).
 derp(0)->
-    qijap:print("end"),
+ %   qijap:print("end"),
     ok;
 derp(X)->
     N=1000*1000*2,
    if X rem N == 0 ->
-	    qijap:print(integer_to_list(X div N));
+   	    qijap:print(integer_to_list(X div N));
       true -> ok
    end,
     derp(X-1).

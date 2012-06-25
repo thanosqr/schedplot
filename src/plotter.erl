@@ -1,8 +1,8 @@
 -module(plotter).
 -compile(export_all).
 -include("hijap.hrl").
--define(HEIGHT_FACTOR,2).
--define(MAX_HEIGHT,?HEIGHT_FACTOR*8).
+-define(GRAPH_HEIGHT,127).
+-define(SPACE_BETW_CORES,25).
 -define(LGrey,?wxLIGHT_GREY_PEN).
 -define(Black,?wxBLACK_PEN).
 -define(MGrey,?wxMEDIUM_GREY_PEN).
@@ -35,33 +35,36 @@ drawLinePoints(Paint,List)->
     lists:map(fun({A,B})->wxDC:drawLine(Paint,A,B) end,List).
 
 
-drawLines(_,[],_,_)->
+drawLines(_,[],_,_,_)->
     ok;
-drawLines(Paint,[Length|Lengths],X,Yo)->
-    dl(Paint,X,Yo,Length),
-    drawLines(Paint,Lengths,X+1,Yo).
+drawLines(Paint,[Length|Lengths],X,Yo,VertZ)->
+    dl(Paint,X,Yo,Length,VertZ),
+    drawLines(Paint,Lengths,X+1,Yo,VertZ).
 
-dl(Paint,X,Yo,Length)->
-    wxDC:drawLine(Paint,{X,Yo},{X,Yo-?HEIGHT_FACTOR*Length}).
+dl(Paint,X,Yo,Length,VertZ)->
+    wxDC:drawLine(Paint,{X,Yo},{X,Yo-qutils:strunc(VertZ*Length)}).
 
-drawCoreLine(Paint,Lengths,Yo,PWidth)->
+drawCoreLine(Paint,Lengths,Yo,PWidth,VertZ)->
     wxDC:setPen(Paint,?Grey),
     wxDC:drawLine(Paint,{0,Yo},{PWidth,Yo}),
-    wxDC:drawLine(Paint,{0,Yo-?MAX_HEIGHT},{PWidth,Yo-?MAX_HEIGHT}),
+    wxDC:drawLine(Paint,{0,Yo-qutils:strunc(VertZ*?GRAPH_HEIGHT)},
+		  {PWidth,Yo-qutils:strunc(VertZ*?GRAPH_HEIGHT)}),
     wxDC:setPen(Paint,?DEF_C),
-    drawLines(Paint,Lengths,0,Yo).
+    drawLines(Paint,Lengths,0,Yo,VertZ).
 
-drawCoreLines(Paint,CLs,SLs,PWidth,PHeight)->
-    drawCoreLines(Paint,CLs,42,SLs,PWidth,PHeight).
-drawCoreLines(_,[],_,_,_,_)->ok;
-drawCoreLines(Paint,[CL|CLs],Y,[SL|SLs],PWidth,PHeight)->
-    drawCoreLine(Paint,CL,Y,PWidth),
-    if Y-?MAX_HEIGHT<PHeight->
-	    wxWindow:move(SL,8,Y-18);
+drawCoreLines(Paint,CLs,SLs,PWidth,PHeight,VertZ)->
+    drawCoreLines(Paint,CLs,qutils:strunc(VertZ*?GRAPH_HEIGHT)+?SPACE_BETW_CORES,
+		  SLs,PWidth,PHeight,VertZ).
+drawCoreLines(_,[],_,_,_,_,_)->ok;
+drawCoreLines(Paint,[CL|CLs],Y,[SL|SLs],PWidth,PHeight,VertZ)->
+    drawCoreLine(Paint,CL,Y,PWidth,VertZ),
+    if Y-?SPACE_BETW_CORES<PHeight->
+	    wxWindow:move(SL,8,Y-((qutils:strunc(VertZ*?GRAPH_HEIGHT) +?SPACE_BETW_CORES) div 2));
        true->
 	    wxWindow:move(SL,-42,-42)
     end,
-    drawCoreLines(Paint,CLs,Y+42,SLs,PWidth,PHeight).
+    drawCoreLines(Paint,CLs,Y+?SPACE_BETW_CORES+qutils:strunc(VertZ*?GRAPH_HEIGHT),
+		  SLs,PWidth,PHeight,VertZ).
 
 drawGrid(Paint,{ZOffset,XOffset},{ZoomLvl,XPos},Labels,PHeight,PWidth)->
     ZoomFactor = round(math:pow(2,ZoomLvl+ZOffset+?DEF_GU-1)), %edit
@@ -112,18 +115,21 @@ get_N_dec(_,0)->[];
 get_N_dec(R,N)->
     [trunc(R*10)+48|get_N_dec(R*10-trunc(R*10),N-1)].
 
-scarlet(Paint,FromCore,L,Z,X)->
+scarlet(Paint,FromCore,L,Z,X,VertZ)->
     wxDC:setPen(Paint,?Red),
-    wxDC:setFont(Paint,wxFont:new(10,?wxFONTFAMILY_SWISS,?wxFONTSTYLE_NORMAL,
-			    ?wxFONTWEIGHT_NORMAL)),
+    wxDC:setFont(Paint,wxFont:new(10,?wxFONTFAMILY_SWISS,
+				  ?wxFONTSTYLE_NORMAL,
+				  ?wxFONTWEIGHT_NORMAL)),
     lists:map(fun({Time,{SID,Label}})->
 		      if SID>FromCore ->
-			      Y= (SID-FromCore)*42-?MAX_HEIGHT,
+			      Y= (SID-FromCore)*(?SPACE_BETW_CORES
+						 +qutils:strunc(VertZ*?GRAPH_HEIGHT)),
 			      XN = (Time-X) div Z,
 			      wxDC:drawLine(Paint,
-					    {XN,Y-(?MAX_HEIGHT div 2)},
-					    {XN,Y+2+?MAX_HEIGHT}),
-			      wxDC:drawLabel(Paint,Label,{XN+2,Y-?MAX_HEIGHT,42,42});
+					    {XN,Y+2},
+					    {XN,Y-qutils:strunc(VertZ*?GRAPH_HEIGHT)-(?SPACE_BETW_CORES div 2)}),
+			      wxDC:drawLabel(Paint,Label,
+					     {XN+2,Y-4-qutils:strunc(VertZ*?GRAPH_HEIGHT)-(?SPACE_BETW_CORES div 2),42,42});
 			 true ->
 			      ok
 		      end

@@ -69,13 +69,15 @@ draw(Datapack,Paint)->
 			  lists:nthtail(NDatapack#buffdets.fromCore,
 					NDatapack#buffdets.schedlabels),
 			  NDatapack#buffdets.width+?PW_DIFF,
-			  NDatapack#buffdets.height+?PH_DIFF),
+			  NDatapack#buffdets.height+?PH_DIFF,
+			  NDatapack#buffdets.vzoom),
     scarlet:draw(Paint,
 		 NDatapack#buffdets.fromCore,
 		 NDatapack#buffdets.pos,
 		 NDatapack#buffdets.offset,
 		 NDatapack#buffdets.width,
-		 NDatapack#buffdets.scarlet),
+		 NDatapack#buffdets.scarlet,
+		 NDatapack#buffdets.vzoom),
     NDatapack.
     
 

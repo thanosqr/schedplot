@@ -3,9 +3,60 @@
 -compile(export_all).
 -include("hijap.hrl").
 
+mass_test()->
+    lists:map(fun({FN,NT})->
+		      start_test(FN,16,[],NT)
+	      end,[{s1,1},{s10,10},{s100,100},{s300,300},{s600,600}]).
+start_test(FolderName,CoreN,Flags,NTime)->
+T00 = erlang:now(),
+%    io:write(dets:open_file(bolek,[])),
+    create_folder(FolderName),
+    HName=lists:concat([atom_to_list(FolderName),atom_to_list('/trace_gabi_header')]),
+    {ok,FP}=file:open(HName,[write]),
+    io:write(FP,CoreN),
+    io:put_chars(FP,"."),
+    io:nl(FP),
+    io:write(FP,lists:member(gc,Flags)),
+    io:put_chars(FP,"."),			 
+    file:close(FP),
+   T0={0,0,0},
+%    T0 = erlang:now(),
+    scarlet:init(FolderName,T0),
+    PIDs = lists:map(fun(X)-> spawn(pcore,start_tracer,[FolderName,X,Flags,T0]) end, lists:seq(1,CoreN)),
+    PID = spawn(?MODULE,master_tracer,[array:fix(array:from_list(PIDs)),42]),
+    qutils:reregister(master_tracer,PID),
+    %% AT=erlang:now(),
+    %% io:write({run_time,ibap:round(timer:now_diff(AT,T0)/1000000,2)}),
+    %% io:nl(),
+
+    %% lists:map(fun(M)-> PID!M, timer:sleep(42) end,
+    %% 	      [ {trace_ts,1,in,1,{a,a,2},{0,0,0}},
+    %% 		{trace_ts,1,out,1,{a,a,2},{0,0,1}},
+    %% 		{trace_ts,1,in,1,{a,a,2},{0,0,200}},
+    %% 		{trace_ts,1,out,1,{a,a,2},{0,0,208}},
+    %% 		{trace_ts,1,in,1,{a,a,2},{0,0,500}},
+    %% 		{trace_ts,1,out,1,{a,a,2},{0,0,600}}
+    %% 	      ]),
+    lists:map(fun(Core)->
+		      PID!{trace_ts,Core,in,Core,{a,a,2},{0,0,0}},
+		      PID!{trace_ts,Core,out,Core,{a,a,2},{0,NTime,0}}
+	      end,lists:seq(1,16)),
+
+
+    %% gn:h(500*1000,1,3,PID,2),
+    %% gn:h(500*1000,1,7,PID,3),
+    %% gn:h(500*1000,2,1,PID,4),
+    %% gn:h(500*1000,2,6,PID,5),
+    %% gn:h(500*1000,4,4,PID,6),
+
+    case lists:member(no_auto_stop,Flags) of
+		true  -> ok;
+		false -> stop()
+
+    end,
+    io:write({{time,NTime},ibap:round(timer:now_diff(erlang:now(),T00)/1000000,2)}).
 
 start(Fun,FolderName,CoreN,Flags)->
-%    io:write(dets:open_file(bolek,[])),
     create_folder(FolderName),
     HName=lists:concat([atom_to_list(FolderName),atom_to_list('/trace_gabi_header')]),
     {ok,FP}=file:open(HName,[write]),
@@ -20,7 +71,6 @@ start(Fun,FolderName,CoreN,Flags)->
 		false -> PIDapply = PIDapplyT;
 		true -> PIDapply = all
 	end,
-    %%T0={0,0,0},
     T0 = erlang:now(),
     scarlet:init(FolderName,T0),
     PIDs = lists:map(fun(X)-> spawn(pcore,start_tracer,[FolderName,X,Flags,T0]) end, lists:seq(1,CoreN)),
@@ -38,26 +88,7 @@ start(Fun,FolderName,CoreN,Flags)->
     receive
     		apply_done->ok
     end,
-%%    io:write({time,timer:now_diff(erlang:now(),T0)}),
-%%    io:nl(),
 
-    %% lists:map(fun(M)-> PID!M, timer:sleep(42) end,
-    %% 	      [ {trace_ts,1,in,1,{a,a,2},{0,0,0}},
-    %% 		{trace_ts,1,out,1,{a,a,2},{0,0,1}},
-    %% 		{trace_ts,1,in,1,{a,a,2},{0,0,200}},
-    %% 		{trace_ts,1,out,1,{a,a,2},{0,0,208}},
-    %% 		{trace_ts,1,in,1,{a,a,2},{0,0,500}},
-    %% 		{trace_ts,1,out,1,{a,a,2},{0,0,600}}
-    %% 	      ]),
-    
-    %% PID!{trace_ts,1,in,1,{a,a,2},{0,0,0}},
-    %% PID!{trace_ts,1,out,1,{a,a,2},{0,0,500*1000}},
-
-    %% gn:h(500*1000,1,3,PID,2),
-    %% gn:h(500*1000,1,7,PID,3),
-    %% gn:h(500*1000,2,1,PID,4),
-    %% gn:h(500*1000,2,6,PID,5),
-    %% gn:h(500*1000,4,4,PID,6),
 
     case lists:member(no_auto_stop,Flags) of
 		true  -> ok;

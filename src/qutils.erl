@@ -1,6 +1,13 @@
 -module(qutils).
 -compile(export_all).
 
+ceiling(X)->
+    T=trunc(X),
+    if T == X ->
+	    T;
+       true ->
+	    T+1
+    end.
 
 select_tail(L) ->
     select_tail(L,[]).
@@ -56,10 +63,39 @@ reregister(Name,PID)->
 
 maptrunc(L)->
     lists:map(fun(X)->
-		      strunc(X)
+		      X
+%		      ibap:round(X,2)
+%		      strunc(X)
 	      end,L).
 
 strunc(X) when (X<1) and (X>0) ->
     1;
 strunc(X) ->
     trunc(X).
+
+
+
+encode(N)->
+    L=lists:map(fun(X)->
+			X rem 120
+		end,lists:seq(1,N*1000*1000)),
+
+    A=erlang:now(),
+    LB=list_to_binary(lists:map(fun(X)-> 
+					<<X:8>>
+				end,L)),
+		      B=erlang:now(),
+		      io:write({ibap:round(timer:now_diff(B,A)/1000000,2)}),io:nl(),
+		      {ok,T}=dets:open_file(int,[]),
+		      dets:insert(T,{1,L}),
+		      dets:close(T),
+		      C=erlang:now(),
+		      io:write({ibap:round(timer:now_diff(C,B)/1000000,2)}),io:nl(),
+		      {ok,Tb}=dets:open_file(bin,[]),
+		      dets:insert(Tb,{1,LB}),
+		      dets:close(Tb),
+		      io:write({ibap:round(timer:now_diff(erlang:now(),B)/1000000,2)}),io:nl().
+
+
+g(X)->X.
+

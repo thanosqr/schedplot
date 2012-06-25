@@ -47,6 +47,7 @@
 		   max_zoom,
 		   schedlabels,
 		   scarlet,
-		   fromCore=0
+		   fromCore=0,
+		   vzoom=16/127
 		  }).
 						%zoom level: 0 = 1-1, max_zoom = reduced to 1 value
