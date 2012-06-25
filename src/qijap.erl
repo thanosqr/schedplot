@@ -2,38 +2,62 @@
 -compile(export_all).
 -include("hijap.hrl").
 
+-define(AN_FLAGS,[]).
+-define(AN_CONFL,[]).
+-define(START_FLAGS,[gc,trace_all,no_auto_stop]).
+
 view(FolderName)->
-	uds:init(FolderName).
+    uds:init(FolderName).
 
 view()->
-	view(?DEFAULT_FOLDER_NAME).
+    view(?DEFAULT_FOLDER_NAME).
 
-analyze(FolderName)->
-	ibap:analyze(FolderName).
+
 
 analyze()->
-	analyze(?DEFAULT_FOLDER_NAME).
+    analyze(?DEFAULT_FOLDER_NAME,[]).
+analyze(Flags) when erlang:is_list(Flags)->
+    analyze(?DEFAULT_FOLDER_NAME,Flags);
+analyze(FolderName)->
+    analyze(FolderName,[]).
+analyze(FolderName,Flags)->
+    HName=string:concat(atom_to_list(FolderName),"/trace_gabi_header"),
+
+    {ok,F}=file:open(HName,[read]),
+    {ok,CoreN} = io:read(F,''),
+    file:close(F),
+
+    qutils:flag_check(?AN_FLAGS,Flags),
+    qutils:conflicting_flags(?AN_CONFL,Flags),    
+    case lists:keyfind(group,1,Flags) of
+	false ->
+	    ibap:analyze(FolderName,?GU,{1,CoreN});
+	{group,GU} ->
+	    ibap:analyze(FolderName,GU,{1,CoreN})
+    end.	    
+
 
 stop()->
-	pcore:stop().
+    pcore:stop().
 
 start(Fun,FolderName,Flags)->
-	case lists:member(gc,Flags) of
-		false->
-			pcore:start(Fun,FolderName,
-						erlang:system_info(schedulers),Flags);
-		true ->
-			pcore:start(Fun,FolderName,
-						erlang:system_info(schedulers)+1,Flags)
-	end.
+    qutils:flag_check(?START_FLAGS,Flags),
+    case lists:member(gc,Flags) of
+	false->
+	    pcore:start(Fun,FolderName,
+			erlang:system_info(schedulers),Flags);
+	true ->
+	    pcore:start(Fun,FolderName,
+			erlang:system_info(schedulers)+1,Flags)
+    end.
 
 start(Fun,Flags) when erlang:is_list(Flags) ->
-	start(Fun,?DEFAULT_FOLDER_NAME,Flags);
+    start(Fun,?DEFAULT_FOLDER_NAME,Flags);
 start(Fun,FolderName) ->
-	start(Fun,FolderName,[]).
+    start(Fun,FolderName,[]).
 
 start(Fun)->
-	start(Fun,?DEFAULT_FOLDER_NAME,[]).
+    start(Fun,?DEFAULT_FOLDER_NAME,[]).
 
 print(Label)->
     scarlet:print(Label).
@@ -43,20 +67,20 @@ print(Label)->
 %%--------------------------------------------------------------%%	
 
 list(X)->
-	start({lists,seq,[1,X*1000*100]},[trace_all]).
+    start({lists,seq,[1,X*1000*100]},[trace_all]).
 
 nlist(X)->
-	start({lists,seq,[1,X*1000*100]}).
+    start({lists,seq,[1,X*1000*100]}).
 
 t()->
-	{ok,S} = dets:open_file("qijap_profile/analyzed_trace"),
-	S.
+    {ok,S} = dets:open_file("qijap_profile/analyzed_trace"),
+    S.
 
 r(S,X)->
-	lists:reverse(lists:sort(dets:match(S,{{X,0,'$1'},'_'}))).
+    lists:reverse(lists:sort(dets:match(S,{{X,0,'$1'},'_'}))).
 
 seqs(X)->
-        start({?MODULE,herps,[X*1000*1000]},[]).
+    start({?MODULE,herps,[X*1000*1000]},[]).
 herps(X)->
     spawn(?MODULE,herp,[X,self()]),
     receive
@@ -70,17 +94,17 @@ seq(X)->
     start({?MODULE,derps,[X*1000*1000]},[]).
 
 derps(X)->
-%    qijap:print("start"),
+						%    qijap:print("start"),
     derp(X).
 derp(0)->
- %   qijap:print("end"),
+						%   qijap:print("end"),
     ok;
 derp(X)->
     N=1000*1000*2,
-   if X rem N == 0 ->
+    if X rem N == 0 ->
    	    qijap:print(integer_to_list(X div N));
-      true -> ok
-   end,
+       true -> ok
+    end,
     derp(X-1).
 
 
@@ -89,20 +113,20 @@ herp(0)->
 herp(X) ->
     herp(X-1).
 
-% { {PID = SID, TimeIn}, TimeOut,PID}
+						% { {PID = SID, TimeIn}, TimeOut,PID}
 search()->
     {ok,S}=dets:open_file("saved/p220",[]),
     dets:traverse(S,fun({ {SID,{Tin1,Tin2,Tin3}}, {Tout1,Tout2,Tout3},PID})->
 			    case dets:select(S, [ {  {{'$1',{'$2','$3','$4'}},'_',PID},
 						     [{ 'and', 
-						       {'=/=','$1',SID},
-						       {'>=',
-							{'+',{'*',{'+',{'*','$2',1000000},'$3'},1000000},'$4'},
-							{'+',{'*',{'+',{'*',Tin1,1000000},Tin2},1000000},Tin3}},
+							{'=/=','$1',SID},
+							{'>=',
+							 {'+',{'*',{'+',{'*','$2',1000000},'$3'},1000000},'$4'},
+							 {'+',{'*',{'+',{'*',Tin1,1000000},Tin2},1000000},Tin3}},
 
-						       {'<',
-							{'+',{'*',{'+',{'*','$2',1000000},'$3'},1000000},'$4'},
-							{'+',{'*',{'+',{'*',Tout1,1000000},Tout2},1000000},Tout3}}}],
+							{'<',
+							 {'+',{'*',{'+',{'*','$2',1000000},'$3'},1000000},'$4'},
+							 {'+',{'*',{'+',{'*',Tout1,1000000},Tout2},1000000},Tout3}}}],
 						     ['$_']}]) of
 				[] -> ok;
 				L-> 			    
@@ -117,24 +141,24 @@ search()->
 sd(C1,C2)->
     S=t(),
     lists:map(fun(Zoom)->
-       lists:map(fun(Key)->
-			 case
-			     {dets:match(S,{{C1,Zoom,Key},'$1'}),dets:match(S,{{C2,Zoom,Key},'$1'})}
-			 of
-			     {[[V1]],[[V2]]}->
-				 case overlap(V1,V2) of
-				     0 -> ok;
-				     N -> 
-					 io:write({Zoom,Key,N}),io:nl(),
-					 io:write(V1),io:nl(),
-					 io:write(V2),io:nl(),
-					 io:nl()
+		      lists:map(fun(Key)->
+					case
+					    {dets:match(S,{{C1,Zoom,Key},'$1'}),dets:match(S,{{C2,Zoom,Key},'$1'})}
+					of
+					    {[[V1]],[[V2]]}->
+						case overlap(V1,V2) of
+						    0 -> ok;
+						    N -> 
+							io:write({Zoom,Key,N}),io:nl(),
+							io:write(V1),io:nl(),
+							io:write(V2),io:nl(),
+							io:nl()
 
 
-				 end;
-			     _-> ok
-			 end
-		 end,lists:seq(1,500))
+						end;
+					    _-> ok
+					end
+				end,lists:seq(1,500))
 	      end,lists:seq(0,0)).
 
 
@@ -149,4 +173,4 @@ overlap([V1|T1],[V2|T2])->
        true->
 	    overlap(T1,T2)
     end.
-    
+

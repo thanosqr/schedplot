@@ -245,9 +245,6 @@ decode(In,Out,GU)->
     end.
 
 insert(Out,Val)->
-    %% if Val > 8 ->io:write({wat});
-    %%    true -> ok
-    %% end,
     Size = Out#out.size,
     if Size > ?MAX_OUT ->
 	    save(Out);
@@ -335,35 +332,20 @@ generate_zoom_lvls(DetsNameList,{FromCore,ToCore},MaxZoomOut,Z0MaxLength)->
 			  done->ok
 		      end end,lists:seq(FromCore,ToCore)).
 
-%%     lists:map(fun(OldZoom)->
-%% 		      lists:map(fun({CoreID,Z0MaxKey})->
-%% %					Tim1 = erlang:now(),
-%% %					Keys=dets:match(Dets,{{CoreID,OldZoom,'$3'},'_'}),
-%% %					Tim2=erlang:now(),
-%% %					SKeys=lists:sort(Keys),
-%% 					MaxKey = qutils:ceiling(Z0MaxKey/math:pow(2,OldZoom)),
-%% 					traverse(Dets,CoreID,OldZoom,lists:seq(1,MaxKey))
-%% 				end, CoreList)
-%% 						%io:write({OldZoom,round(timer:now_diff(erlang:now(),DT)/1000000,2)}),io:nl()
-%% 	      end, lists:seq(0,MaxZoomOut)).
 
 traverse(Dets,CoreID,OldZoom,[Key1,Key2|Keys])->
     case dets:lookup(Dets,{OldZoom,Key1}) of
-	[]->io:write({{a,OldZoom},Key1,Key2,Keys}),io:nl();
-	[{K1,Values1}]->
+	[]->ok;
+	[{_K1,Values1}]->
 	    case dets:lookup(Dets,{OldZoom,Key2}) of
 		[]->
-%		    io:write({{b,OldZoom},Key1,Key2,Keys}),io:nl(),
 		    Values=cets:zoom_out(Values1),
 		    dets:insert(Dets,{{OldZoom+1,(Key1+1) div 2},
 				      Values});
-%		    dets:insert(Dets,{K1,qutils:maptrunc(Values1)});
-		[{K2,Values2}]->
+		[{_K2,Values2}]->
 		    Values=cets:zoom_out(<<Values1/binary,Values2/binary>>),
 		    dets:insert(Dets,{{OldZoom+1,Key2 div 2},
 				      Values}),
-%		    dets:insert(Dets,{K1,qutils:maptrunc(Values1)}),
-%		    dets:insert(Dets,{K2,qutils:maptrunc(Values2)}),
 		    traverse(Dets,CoreID,OldZoom,Keys)
 	    end
     end;
@@ -399,25 +381,25 @@ analyze(FolderName,GU,{FromCore,ToCore})->
     MaxKeysList=decode_all(FolderName,DetsNameList,GU,{FromCore,ToCore}),
     Longest=lists:max(lists:map(fun({_,X})->X end,MaxKeysList)),
     DT2 = erlang:now(),
-    io:write({{decode,GU,FolderName},round(timer:now_diff(DT2,DT)/1000000,2)}),io:nl(),
+    io:write({{decode_time,GU,FolderName},round(timer:now_diff(DT2,DT)/1000000,2)}),io:nl(),
     MaxZoomLevel=erlang:trunc(math:log(Longest)/math:log(2))+1, % up to 256px
-io:write({mzl,MaxZoomLevel}),
     DT3=erlang:now(),
     generate_zoom_lvls(DetsNameList,{FromCore,ToCore},MaxZoomLevel,MaxKeysList),
-    io:write({{gen_total,GU,FolderName},round(timer:now_diff(erlang:now(),DT3)/1000000,2)}),io:nl();
-analyze(FolderName,GU,CoreN)->
-    analyze(FolderName,GU,{1,CoreN}).
+    io:write({{zoom_level_time,GU,FolderName},round(timer:now_diff(erlang:now(),DT3)/1000000,2)}),io:nl().
 
-analyze(FolderName)->
-    HName=string:concat(atom_to_list(FolderName),"/trace_gabi_header"),
-    {ok,F}=file:open(HName,[read]),
-    {ok,CoreN} = io:read(F,''),
-    file:close(F),
-    analyze(FolderName,?GU,CoreN).
+%% analyze(FolderName,GU,CoreN)->
+%%     analyze(FolderName,GU,{1,CoreN}).
+
+%% analyze(FolderName)->
+%%     HName=string:concat(atom_to_list(FolderName),"/trace_gabi_header"),
+%%     {ok,F}=file:open(HName,[read]),
+%%     {ok,CoreN} = io:read(F,''),
+%%     file:close(F),
+%%     analyze(FolderName,?GU,CoreN).
 
 
-analyze()->
-    analyze(?DEFAULT_FOLDER_NAME).
+%% analyze()->
+%%     analyze(?DEFAULT_FOLDER_NAME).
 
 
 round(N,P)->

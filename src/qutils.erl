@@ -97,5 +97,33 @@ encode(N)->
 		      io:write({ibap:round(timer:now_diff(erlang:now(),B)/1000000,2)}),io:nl().
 
 
-g(X)->X.
+flag_check(Valid,Flags)->
+    case lists:filter(fun(F)->
+			case lists:member(F,Valid) of
+			    true -> false;
+			    false -> true
+			end
+		end,Flags) of
+	[] ->
+	    ok;
+	L ->
+	    io:format("Warning: invalid flag(s): "),
+	    io:write(L),
+	    io:nl()
+    end.
 
+conflicting_flags(Confl,Flags)->
+    case lists:filter(fun(C)->
+			      lists:member(C,Flags)
+		      end,Confl) of
+	[] ->
+	    ok;
+	[_] ->
+	    ok;
+	[H|T] ->
+	    io:format("Warning: conflicting flags: "),
+	    io:write([H|T]),
+	    io:format(", using "),
+	    io:write(H),
+	    io:nl()	    
+    end.
