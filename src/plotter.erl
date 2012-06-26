@@ -4,6 +4,14 @@
 	 drawGrid/6, drawCoreLines/6,
 	 label_portray/1]).
 
+-export_type([wxpaint/0, wxpanel/0, wxframe/0, 
+			  wxlabel/0]).
+
+-type wxframe() :: any().
+-type wxpanel() :: any().
+-type wxpaint() :: any().
+-type wxlabel() :: any().
+
 -include("hijap.hrl").
 
 -define(GRAPH_HEIGHT,127).
@@ -57,6 +65,11 @@ drawCoreLine(Paint,Lengths,Yo,PWidth,VertZ)->
     wxDC:setPen(Paint,?DEF_C),
     drawLines(Paint,Lengths,0,Yo,VertZ).
 
+-spec drawCoreLines(wxpaint(), [cets:seven_bit_list()],[wxlabel],
+					non_neg_integer(),
+					non_neg_integer(),
+					non_neg_integer()) ->
+						   'ok'.
 drawCoreLines(Paint,CLs,SLs,PWidth,PHeight,VertZ)->
     drawCoreLines(Paint,CLs,qutils:strunc(VertZ*?GRAPH_HEIGHT)+?SPACE_BETW_CORES,
 		  SLs,PWidth,PHeight,VertZ).
@@ -70,6 +83,11 @@ drawCoreLines(Paint,[CL|CLs],Y,[SL|SLs],PWidth,PHeight,VertZ)->
     end,
     drawCoreLines(Paint,CLs,Y+?SPACE_BETW_CORES+qutils:strunc(VertZ*?GRAPH_HEIGHT),
 		  SLs,PWidth,PHeight,VertZ).
+
+-spec drawGrid(wxpaint(), {non_neg_integer(),non_neg_integer()},
+				{non_neg_integer(),non_neg_integer()},
+				[wxlabel()],non_neg_integer(),non_neg_integer()) ->
+					   'ok'.
 
 drawGrid(Paint,{ZOffset,XOffset},{ZoomLvl,XPos},Labels,PHeight,PWidth)->
     ZoomFactor = round(math:pow(2,ZoomLvl+ZOffset+?DEF_GU-1)), %edit
@@ -87,12 +105,14 @@ drawGrid(Paint,{ZOffset,XOffset},{ZoomLvl,XPos},Labels,PHeight,PWidth)->
 	      end, qutils:zip3(Labels,lists:seq(-Offset,PWidth-Offset,?VERTICAL_INT))),
     wxDC:setPen(Paint,?DEF_C).
 
+-spec create_labels(wxframe(), non_neg_integer)->
+						   [wxlabel()].
 create_labels(Frame,N)->
     lists:map(fun(_)->
 		      wxStaticText:new(Frame,?ANY,"")
 	      end, lists:seq(0,N)).
 
-
+-spec label_portray(non_neg_integer()) -> qijap:label().
 label_portray(N)->
     if N==0 ->
 	    form(0,"");
@@ -120,6 +140,10 @@ get_N_dec(_,0)->[];
 get_N_dec(R,N)->
     [trunc(R*10)+48|get_N_dec(R*10-trunc(R*10),N-1)].
 
+-spec scarlet(wxpaint(), ibap:core_id(),[wxlabel()],
+			  non_neg_integer(), non_neg_integer(), 
+			  non_neg_integer())->
+					 'ok'.
 scarlet(Paint,FromCore,L,Z,X,VertZ)->
     wxDC:setPen(Paint,?Red),
     wxDC:setFont(Paint,wxFont:new(10,?wxFONTFAMILY_SWISS,

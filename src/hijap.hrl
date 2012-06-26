@@ -25,6 +25,7 @@
 -define(ZLH,-60).
 -define(LABEL_N,100).
 % GU = math:pow(2,DEF_GU) but used in guards
+
 -record(buffdets, {data,
 		   tab,
 		   pos,
@@ -51,4 +52,4 @@
 		   fromCore=0,
 		   vzoom=16/127
 		  }).
-						%zoom level: 0 = 1-1, max_zoom = reduced to 1 value
+-opaque buffdets() :: #buffdets{}.

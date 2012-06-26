@@ -2,6 +2,7 @@
 
 -export([insert/2, lookup/2, decode/1, zoom_out/1]).
 
+-export_type([seven_bit_list/0]).
 -define(MAX_INT, 255).
 
 -type key() :: {non_neg_integer(), pos_integer()}.

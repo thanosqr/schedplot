@@ -9,6 +9,7 @@
 
 %%  [ zoom levels [cores [ data [values]]]]] 
 
+-spec open(qijap:folder(), plotter:wxpanel(), plotter:wxframe())-> hijap:buffdets().
 open(FolderName, Panel, Frame) ->
     open(FolderName, ?DEF_BUFFER_X, ?DEF_BUFFER_Z, Panel, Frame).
 
@@ -84,6 +85,7 @@ getData(Datapack) ->
 %% |
 %% ----------------------------------------------------------------------
 
+-spec read(hijap:buffdets()) -> {cets:seven_bit_list(),hijap:buffdets()}.
 read(Datapack)->
     {lists:nthtail(Datapack#buffdets.fromCore,
 		   getData(Datapack)),
@@ -119,7 +121,17 @@ update(PID,Adj,Old)->
 %% 				   }).
 
 
-
+-spec create_buffer(dets:tab_name(),
+					non_neg_integer(),non_neg_integer(),non_neg_integer(),
+					plotter:wxpanel(),plotter:wxframe(),
+					non_neg_integer(),
+					[plotter:wxlabel()],
+					non_neg_integer(),
+					plotter:wxlabel(),
+					[plotter:wxlabel()],
+					dict())->
+			 hijap:buffdets().
+					
 create_buffer(Tab,BufferXsize,BufferZsize,CoreN,Panel,Frame,Max_Zoom,Labels,Width,Zoom_Label,SchedLabels,Scarlet)->
     %% When the zoom_lvl = Max_Zoom, the whole graph is 1px.
     Zoom=Max_Zoom-trunc(math:log(Width)/math:log(2)), %%zoom_make

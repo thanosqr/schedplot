@@ -9,6 +9,8 @@
 -define(MAX_TOTAL_SIZE, 420).
 -define(MAX_MODULE_SIZE, 15).
 
+-type famdict_id() :: non_neg_integer().
+
 -record(famdict, {current,
 		  old=[],
 		  size=0,
@@ -23,6 +25,8 @@ new(FName) ->
     {ok, F} = file:open(FName, [raw, write]),
     #famdict{current = ?UD:new(), file = F}.
 
+-spec check({module(), atom(), non_neg_integer()}, famdict()) -> 
+				   {{famdict_id(), famdict_id()}, famdict()}.
 check({M,F,A},D) ->
     check({F,A},M,D).         %MOPT {F,A}
 

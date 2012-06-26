@@ -30,6 +30,11 @@ print(Label) ->
     scarlet ! {T, {SID, Label}},
     ok.
 
+-spec draw(plotter:wxpaint(), ibap:core_id(),
+		   {non_neg_integer(),non_neg_integer()},
+		   {non_neg_integer(),non_neg_integer()},
+		   non_neg_integer(),non_neg_integer(),non_neg_integer()) ->
+				  'ok'.
 draw(Paint, FromCore, {ZPos,XPos}, {Zoff,Xoff}, Width, D, VertZ) ->
     Z = round(math:pow(2,ZPos+Zoff+?DEF_GU-1)),  % edit
     X = (XPos+Xoff-?DETS_PACK_SIZE)*Z,
