@@ -1,26 +1,21 @@
 -module(fib).
--compile(export_all).
 
-fib(1)->
-	1;
-fib(2) ->
-	1;
-fib(N) ->
-	fib(N-1)+fib(N-2).
+-export([fib/2]).
 
+-spec fib(pos_integer(), pos_integer()) -> 'ok'.
 
-fib_w(PID,N)->
+fib(N, M) ->
+    L = lists:seq(1, M),
+    _ = [spawn(fun() -> fib_w(self(), N) end) || _ <- L],
+    _ = [receive ok -> ok end || _ <- L],
+    ok.
+
+fib_w(PID, N) ->
     qijap:print(pid_to_list(self())),
-	fib(N),
+    fib(N),
     qijap:print(pid_to_list(self())),
-    PID!ok.
+    PID ! ok.
 
-fib(N,M)->
-	lists:map(fun(_)->
-					  spawn(?MODULE,fib_w,[self(),N])
-			  end, lists:seq(1,M)),
-	lists:map(fun(_)->
-					  receive
-						  ok->ok
-					  end
-			  end,lists:seq(1,M)).
+fib(1) -> 1;
+fib(2) -> 1;
+fib(N) -> fib(N-1) + fib(N-2).

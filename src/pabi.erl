@@ -1,56 +1,67 @@
-%% during execution we encode and store the packets depending on their scheduler_id
-%% when ?LIMIT of packets have arrived we write in the file groups of packets (each group containing packets with the same scheduler)
+%% during execution we encode and store the packets depending on their
+%% scheduler_id when ?LIMIT of packets have arrived we write in the
+%% file groups of packets (each group containing packets with the same
+%% scheduler)
 
-%% each packet starts with a byte related* to the time difference between this packet and the previous one
-%% obviously this byte cannot be 0 so we use it to denote that the following packets belong to the next scheduler
-%% if we read two 0 bytes that means that this was the last scheduler and the following packets belong to the first scheduler
+%% each packet starts with a byte related* to the time difference
+%% between this packet and the previous one obviously this byte cannot
+%% be 0 so we use it to denote that the following packets belong to
+%% the next scheduler if we read two 0 bytes that means that this was
+%% the last scheduler and the following packets belong to the first
+%% scheduler
 
-%% normally one byte is used for the time difference but in some cases more bytes may be required
-%% benchmarks should be done to determine the optimum default number
+%% normally one byte is used for the time difference but in some cases
+%% more bytes may be required benchmarks should be done to determine
+%% the optimum default number
 
 -module(pabi).
--compile(export_all).
+
+-export([open/4, add/3, close/1]).
+
 -include("hijap.hrl").
-%%-exports([open/1,store/2,close/1,add/4]).
+
 -define(MAX_SIZE,10000).
+
+-type trace_msg() :: {pid(), 'in' | 'out', mfa(), erlang:timestamp()}.
+
 -record(pabi,{file,
-	      famdict,
+	      famdict :: famdict:famdict(),
 	      data,
 	      size=0,
 	      prevtime}).
-
+-opaque pabi() :: #pabi{}.
 
 %%%% MFALib = [{F,A,[M]}]
 
+-spec open(file:filename(), file:filename(),
+	   erlang:timestamp(), qijap:start_flags()) -> pabi().
+open(NameData, NameFamDict, PrevTime, Flags) ->
+    {ok, S} = file:open(NameData, [write, raw, compressed]),
+    FamDict = case lists:member(trace_mfa, Flags) of
+		  true ->
+		      famdict:new(NameFamDict);
+		  false ->
+		      42
+	      end,
+    #pabi{file = S,
+	  famdict = FamDict,
+	  data = [],
+	  prevtime = PrevTime}.
 
-open(NameData,NameFamdict,PrevTime,Flags)->
-    {ok,S}=file:open(NameData,[write,raw,compressed]),
-    case lists:member(trace_mfa,Flags) of
-	true ->
-	    Famdict = famdict:new(NameFamdict);
-	false ->
-	    Famdict = 42
-    end,
-    #pabi{file=S,
-	  famdict=Famdict,
-	  data=[],
-	  prevtime=PrevTime}.
-
-
-close(S)->
-    SN=store(S),
-    famdict:close(SN#pabi.famdict),
+-spec close(pabi()) -> 'ok' | {'error', atom()}.
+close(S) ->
+    SN = store(S),
+    ok = famdict:close(SN#pabi.famdict),
     file:close(SN#pabi.file).
 
-add(Pack1,Pack2,S)->
+-spec add(trace_msg(), trace_msg(), pabi()) -> pabi().
+add(Pack1, Pack2, S) ->
     case S#pabi.size of
     	?MAX_SIZE ->
-    	    add(Pack1,Pack2,store(S));
+    	    add(Pack1, Pack2, store(S));
     	N ->
     	    {Encoded,NFamdict,NPrevTime} = 
-    		encode(Pack1,Pack2,
-    		       S#pabi.famdict,
-    		       S#pabi.prevtime),
+    		encode(Pack1, Pack2, S#pabi.famdict, S#pabi.prevtime),
     	    NData = update(Encoded,S#pabi.data),
     	    S#pabi{famdict=NFamdict,
 		   data=NData,
@@ -58,19 +69,15 @@ add(Pack1,Pack2,S)->
 		   prevtime=NPrevTime}
     end.
 
-
-
-update(Encoded,Data)->
+update(Encoded,Data) ->
     [Encoded|Data].
 
-store(S)->
-    L=lists:reverse(S#pabi.data),
-%    L=S#pabi.data,
-    B=binary:list_to_bin(L),
-    file:write(S#pabi.file,B),
-    S#pabi{data=[],
-	   size=0}.
-
+store(S) ->
+    L = lists:reverse(S#pabi.data),
+    %% L = S#pabi.data,
+    B = binary:list_to_bin(L),
+    ok = file:write(S#pabi.file,B),
+    S#pabi{data = [], size = 0}.
 
 %% Common pack ---> 5 bytes
 %% TimeIn: 8 bits  --cannot be 0--
@@ -96,8 +103,7 @@ encode({PID,in,MFAin,TimeIn},{PID,out,MFAout,TimeOut},Famdict,PrevTime)->
 	    Fm = 0,
 	    MFAbytes = <<0:8>>,
 	    PIDbytes = <<0:16>>,
-	    NFamdict = 42
-		;
+	    NFamdict = 42;
 	_ ->
 	    PIDbytes = pid_encode(PID),			
 	    {MFAbytes,NFamdict,Fo,Fm} = mfa_encode(MFAin,MFAout,Famdict)
@@ -110,7 +116,6 @@ encode({PID,in,MFAin,TimeIn},{PID,out,MFAout,TimeOut},Famdict,PrevTime)->
 encode({_PID1,in,_MFA1,_T1},{_PID2,out,_MFA2,_T2},F,P) ->
 %   --diff PID error--
     {<<0:8>>,F,P}.
-
 
 pid_encode(PID)->
     BID=term_to_binary(PID),
@@ -148,17 +153,14 @@ time_rec_encode(Time)->
     end.
 
 time_encode(TimeIn,PrevTime)->
-    TimeList=time_rec_encode(timer:now_diff(TimeIn,PrevTime)),
+    TimeList = time_rec_encode(timer:now_diff(TimeIn,PrevTime)),
     binary:list_to_bin(TimeList).
 
 duration_encode(TimeIn,TimeOut,Fo,Fm)->
-    Duration=timer:now_diff(TimeOut,TimeIn),
-    if Duration<?MAX_DUR ->
+    Duration = timer:now_diff(TimeOut,TimeIn),
+    if Duration < ?MAX_DUR ->
 	    <<Fo:1,Fm:1,Duration:6>>;
        true->
 	    binary:list_to_bin([<<Fo:1,Fm:1,?MAX_DUR:6>>|
 				time_rec_encode(Duration-?MAX_DUR)])
     end.
-
-
-   

@@ -1,22 +1,32 @@
 -module(famdict).
--compile(export_all).
--define(UD,dict).
--define(MAX_DICT_SIZE,255).
--define(MAX_TOTAL_SIZE,420).
--define(MAX_MODULE_SIZE,15).
+
+-export([new/1, close/1, check/2]).
+
+-export_type([famdict/0]).
+
+-define(UD, dict).
+-define(MAX_DICT_SIZE, 255).
+-define(MAX_TOTAL_SIZE, 420).
+-define(MAX_MODULE_SIZE, 15).
 
 -record(famdict, {current,
 		  old=[],
 		  size=0,
 		  file,
 		  total_size=1}).
-		  
+-opaque famdict() :: #famdict{}.
 	  
 %{ {F,A}, {ID1,[{M,ID2}]} }
 
-check({M,F,A},D)->
+-spec new(file:filename()) -> famdict().
+new(FName) ->
+    {ok, F} = file:open(FName, [raw, write]),
+    #famdict{current = ?UD:new(), file = F}.
+
+check({M,F,A},D) ->
     check({F,A},M,D).         %MOPT {F,A}
-check(FA,M,D)->
+
+check(FA,M,D) ->
     case flookup(FA,D) of
 	not_found ->
 	    {DN,ID1,ID2} = add_function(FA,M,D);
@@ -30,17 +40,12 @@ check(FA,M,D)->
 	    end
     end,
     {{ID1,ID2},DN}.
-
-
-new(Name)->
-    {ok,F}=file:open(Name,[raw,write]),
-    #famdict{current=?UD:new(),file=F}.
 		 
-add_function(FA,M,D)->
+add_function(FA, M, D) ->
     case D#famdict.size of
 	?MAX_DICT_SIZE ->
 	    DN = add_slot(D),
-	    S=0;
+	    S = 0;
         S ->
 	    DN = D
     end,
@@ -54,12 +59,11 @@ add_module(FA,M,D,N,ID1) ->
 			       {ID,[M|Ms]}
 		       end,D#famdict.current),
     {D#famdict{current=DN},ID1,N+1}.
-	
-    
-add_slot(D)->
+
+add_slot(D) ->
     case D#famdict.total_size of 
 	?MAX_TOTAL_SIZE ->
-	    save(D#famdict.old,D#famdict.file),
+	    ok = save(D#famdict.old,D#famdict.file),
 	    D#famdict{current=?UD:new(),
 		      size=0,
 		      total_size=1,
@@ -72,12 +76,12 @@ add_slot(D)->
     end.
 		      
 % TOPT
-save(D,F)->
-    file:write(F,term_to_binary(D)).
+save(D,F) ->
+    file:write(F, term_to_binary(D)).
 
-flookup(FA,D)->
+flookup(FA,D) ->
     case ?UD:find(FA,D#famdict.current) of
-	{ok,Value}->
+	{ok,Value} ->
 	    Value;
 	error ->
 	    not_found
@@ -91,8 +95,9 @@ mlookup(M,[M|_],N)->
     N;
 mlookup(M,[_|Ms],N) ->
     mlookup(M,Ms,N-1).
-    
-close(42)->ok;
-close(D)->
-    save([D#famdict.current|D#famdict.old],D#famdict.file),
+
+-spec close(famdict()) -> 'ok' | {'error', atom()}.
+close(42) -> ok;
+close(D) ->
+    ok = save([D#famdict.current|D#famdict.old],D#famdict.file),
     file:close(D#famdict.file).

@@ -1,58 +1,54 @@
 -module(buffdets).
--compile(export_all).
+
+-export([open/3, read/1, create_buffer/12]).
+
 -include("hijap.hrl").
 
 -define(DEF_BUFFER_X,5).
 -define(DEF_BUFFER_Z,5).
 
+%%  [ zoom levels [cores [ data [values]]]]] 
 
-						%  [ zoom levels [cores [ data [values]]]]] 
-
-open(FolderName,Panel,Frame)->
-    open(FolderName,?DEF_BUFFER_X,?DEF_BUFFER_Z,Panel,Frame).
+open(FolderName, Panel, Frame) ->
+    open(FolderName, ?DEF_BUFFER_X, ?DEF_BUFFER_Z, Panel, Frame).
 
 open(FolderName,BufferXsize,BufferZsize,Panel,Frame)->
-    Width=?WIDTH,
-    {ok,HTab} = dets:open_file(
-		 lists:concat([atom_to_list(FolderName),
-			       "/analyzed_trace1"]),
-		  [{access,read}]),
-    [{init_state,Max_Zoom,CoreN}]=dets:lookup(HTab,init_state),
-    TTabs=lists:map(fun(CoreID)->
-			    {ok,Tab} = dets:open_file(
-					 lists:concat([atom_to_list(FolderName),
-						       "/analyzed_trace",
-						       integer_to_list(CoreID)]),
-					 [{access,read}]),
-			    Tab end, lists:seq(2,CoreN)),
+    Width = ?WIDTH,
+    Options = [{access, read}],
+    {ok, HTab} = dets:open_file(FolderName ++ "/analyzed_trace1", Options),
+    [{init_state,Max_Zoom,CoreN}] = dets:lookup(HTab, init_state),
+    TTabs = lists:map(fun(CoreID)->
+			      FName = FolderName ++ "/analyzed_trace" ++ integer_to_list(CoreID),
+			      {ok, Tab} = dets:open_file(FName, Options),
+			      Tab
+		      end, lists:seq(2, CoreN)),
     Tabs = [HTab|TTabs],
-    Labels=plotter:create_labels(Frame,?LABEL_N),
-    SchedLabels=plotter:create_labels(Frame,CoreN-1),
-    lists:map(fun({X,L})->
-		      wxStaticText:setLabel(L, 
-			 lists:concat(["S",integer_to_list(X)]))
-	      end, lists:zip(lists:seq(1,CoreN),SchedLabels)),
-    {ok,S}=file:open(lists:concat([atom_to_list(FolderName),
-				   "/trace_gabi_header"]),read),
-    io:read(S,''),
-    case io:read(S,'') of
-	{ok,false} ->
+    Labels = plotter:create_labels(Frame,?LABEL_N),
+    SchedLabels = plotter:create_labels(Frame,CoreN-1),
+    lists:foreach(fun({X,L})->
+			  wxStaticText:setLabel(L, 
+						lists:concat(["S",integer_to_list(X)]))
+		  end, lists:zip(lists:seq(1,CoreN),SchedLabels)),
+    {ok,S} = file:open(FolderName ++ "/trace_gabi_header", [read]),
+    {ok,_} = io:read(S, ''),
+    case io:read(S, '') of
+	{ok, false} ->
 	    ok;
-	{ok,true} ->
+	{ok, true} ->
 	    wxStaticText:setLabel(lists:last(SchedLabels), "GC")
     end,
-    Zoom_Label=wxStaticText:new(Frame,?ANY,"",
-				[{pos,{?PWIDTH+?ZLW,?PHEIGHT+?ZLH}}]),
+    Zoom_Label = wxStaticText:new(Frame,?ANY,"",
+				  [{pos,{?PWIDTH+?ZLW,?PHEIGHT+?ZLH}}]),
     create_buffer(Tabs,BufferXsize,BufferZsize,
 		  CoreN,Panel,Frame,Max_Zoom,
 		  Labels,Width,Zoom_Label,
 		  SchedLabels,scarlet:open(FolderName)).
 
-getData(Datapack)->
+getData(Datapack) ->
     {ZoomLvl,From} = Datapack#buffdets.pos,
     Duration = Datapack#buffdets.width,
     Data = Datapack#buffdets.data,
-    ArrayID = (From div (?DETS_PACK_SIZE+1)),          % 1-indexed
+    ArrayID = (From div (?DETS_PACK_SIZE+1)),       % 1-indexed
     ArrayIndex = (From rem (?DETS_PACK_SIZE+1)+1),
 
     if ArrayIndex+Duration =< ?DETS_PACK_SIZE ->
@@ -70,8 +66,6 @@ getData(Datapack)->
 					       Duration-?DETS_PACK_SIZE+ArrayIndex))
 		      end,lists:nth(ZoomLvl,Data))
     end.
-
-
 
 %% ---All Values--------------------------------------------------------
 %% |
@@ -97,7 +91,10 @@ read(Datapack)->
 	 nu ->
 	     Datapack;
 	 Adj ->
-	     spawn(?MODULE,update,[self(),Adj,Datapack]),
+	     Self = self(),
+	     spawn(fun()->
+			   update(Self,Adj,Datapack)
+		   end),
 	     Datapack#buffdets{mode=update}
      end}.
 
@@ -106,20 +103,20 @@ update(PID,Adj,Old)->
     PID!{new_buffer,Buffer}.	
 
 
-buffer_jump(Buffer,From,To)->
-    {BufferXsize,BufferZsize,_CoreN}=Buffer#buffdets.static,
-    X = (From div ?DETS_PACK_SIZE)*?DETS_PACK_SIZE,
-    Zoom=trunc(math:log((To-X)/Buffer#buffdets.width)/math:log(2)),
-    refresh_buffer({0,0},
-		   Buffer#buffdets{left_data=1000,
-				    right_data=1000,
-				    zoomin_data=Zoom,
-				    zoomout_data=Buffer#buffdets.max_zoom-Zoom,
-				    pos={1+BufferZsize div 2,
-					 (1+(BufferXsize div 2))*?DETS_PACK_SIZE},
-				    offset={Zoom-(BufferZsize div 2),
-					    X-(BufferXsize div 2)*?DETS_PACK_SIZE}
-				   }).
+%% buffer_jump(Buffer,From,To)->
+%%     {BufferXsize,BufferZsize,_CoreN}=Buffer#buffdets.static,
+%%     X = (From div ?DETS_PACK_SIZE)*?DETS_PACK_SIZE,
+%%     Zoom=trunc(math:log((To-X)/Buffer#buffdets.width)/math:log(2)),
+%%     refresh_buffer({0,0},
+%% 		   Buffer#buffdets{left_data=1000,
+%% 				    right_data=1000,
+%% 				    zoomin_data=Zoom,
+%% 				    zoomout_data=Buffer#buffdets.max_zoom-Zoom,
+%% 				    pos={1+BufferZsize div 2,
+%% 					 (1+(BufferXsize div 2))*?DETS_PACK_SIZE},
+%% 				    offset={Zoom-(BufferZsize div 2),
+%% 					    X-(BufferXsize div 2)*?DETS_PACK_SIZE}
+%% 				   }).
 
 
 
@@ -180,9 +177,7 @@ get_from_dets(ZoomStart,ZoomEnd,XStart,XEnd,Tabs)->
        end,Tabs)
      end,lists:seq(ZoomStart,ZoomEnd)).
 
-
-
-category(Datapack)->
+category(Datapack) ->
     {ZoomLvl,Xpos} = Datapack#buffdets.pos,
     Width = Datapack#buffdets.width,
     if ZoomLvl>Datapack#buffdets.uz->
@@ -196,4 +191,3 @@ category(Datapack)->
        true ->
 	    nu
     end.
-

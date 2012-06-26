@@ -1,10 +1,11 @@
 -include_lib("wx/include/wx.hrl").
+
 -define(DETS_PACK_SIZE,4096).
 
--define(DEFAULT_FNAME,trace_famdict).
--define(DEFAULT_GNAME,trace_gabi).
--define(DEFAULT_TNAME,analyzed_trace).
--define(DEFAULT_FOLDER_NAME,qijap_profile).
+-define(DEFAULT_FNAME, "trace_famdict").
+-define(DEFAULT_GNAME, "trace_gabi").
+-define(DEFAULT_TNAME, "analyzed_trace").
+-define(DEFAULT_FOLDER_NAME, "qijap_profile").
 
 -define(VERTICAL_INT,100).
 -define(MAX_DUR,63).

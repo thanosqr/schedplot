@@ -1,5 +1,7 @@
 -module(ibap).
--compile(export_all).
+
+-export([analyze/3]).
+
 -include("hijap.hrl").
 
 -record(bytes,{file,
@@ -20,10 +22,47 @@
 	     datalength=0}).
 
 -define(MAX_OUT,?DETS_PACK_SIZE).
--define(READ_N,100000).
+-define(READ_N,10000).
 
+%% analyze() ->
+%%     analyze(?DEFAULT_FOLDER_NAME).
 
-get_packet(Bytes)->
+%% analyze(FolderName) ->
+%%     HName = FolderName ++ "/trace_gabi_header",
+%%     {ok,F} = file:open(HName,[read]),
+%%     {ok,CoreN} = io:read(F,''),
+%%     file:close(F),
+%%     analyze(FolderName, ?GU, CoreN).
+
+%% analyze(FolderName, GU, CoreN) ->
+%%     analyze(FolderName, GU, {1,CoreN}).
+
+-type gu()         :: pos_integer(). %% RENAME ME PLEASE
+-type core_id()    :: pos_integer().
+-type core_range() :: {core_id(), core_id()}.
+
+-spec analyze(qijap:folder(), gu(), core_range()) -> 'ok'.
+
+analyze(FolderName, GU, {FromCore,ToCore})->
+    DetsNameList=lists:map(fun(CoreID)->
+				   lists:concat(
+				     [atom_to_list(FolderName),
+				      "/analyzed_trace",
+				      integer_to_list(CoreID)])
+			   end,lists:seq(FromCore,ToCore)),
+    DT = erlang:now(),
+    MaxKeysList = decode_all(FolderName,DetsNameList,GU,{FromCore,ToCore}),
+    Longest = lists:max(lists:map(fun({_,X}) -> X end, MaxKeysList)),
+    DT2 = erlang:now(),
+    io:write({{decode_time,GU,FolderName},qutils:round(timer:now_diff(DT2,DT)/1000000,2)}),io:nl(),
+    MaxZoomLevel = erlang:trunc(math:log(Longest)/math:log(2))+1, % up to 256px
+    DT3 = erlang:now(),
+    generate_zoom_lvls(DetsNameList,{FromCore,ToCore},MaxZoomLevel,MaxKeysList),
+    io:write({{zoom_level_time,GU,FolderName},
+	      qutils:round(timer:now_diff(erlang:now(),DT3)/1000000,2)}),
+    io:nl().
+
+get_packet(Bytes) ->
     case get_byte(Bytes) of
 	end_of_file ->
 	    end_of_file;
@@ -54,7 +93,7 @@ get_byte(Bytes)->
 		{ok,[D|Data]}->
 		    {D,Bytes#bytes{left=erlang:length(Data),data=Data}};
 		eof -> 
-		    file:close(Bytes#bytes.file),
+		    ok = file:close(Bytes#bytes.file),
 		    end_of_file
 	    end;
 	N ->
@@ -97,7 +136,7 @@ get_duration(Duration1,Bytes2)->
     <<Fo:1,Fm:1,Duration:6>> = <<Duration1>>,
     if Duration<?MAX_DUR->
 	    {Duration,Fo,Fm,Bytes2};
-       Duration==?MAX_DUR ->
+       Duration=:=?MAX_DUR ->
 	    case get_till_not_max(Duration,Bytes2,255) of
 		{DurationRec,Bytes3} ->
 		    {DurationRec,Fo,Fm,Bytes3};
@@ -174,20 +213,6 @@ pack(Duration,Time,_PID,_MFA)->
 get_times(Bytes)->
     get_packet(Bytes).
 
-test_cv(File,GU)->
-   test_calc_val( #in{file=File,
-		  left=0,
-		  value=0,
-		  ones=0
-		 },GU).
-test_calc_val(In,GU)->
-    case calc_val(In,GU) of
-	end_of_file ->
-	    [];
-	{V,In2} ->
-	    [V|test_calc_val(In2,GU)]
-    end.
-
 calc_val(end_of_file,_)->
     end_of_file;
 calc_val(In,GU)->
@@ -252,17 +277,14 @@ insert(Out,Val)->
 	    Out#out{data=[Val|Out#out.data],size=Size+1}
     end.
 
-
-
 save(Out)->
-    cets:insert(Out#out.file,
-		{{Out#out.zoom, Out#out.key},
-		 lists:reverse(Out#out.data)}),
+    ok = cets:insert(Out#out.file,
+		     {{Out#out.zoom, Out#out.key},
+		      lists:reverse(Out#out.data)}),
     Out#out{data=[],
 	    key=Out#out.key+1,
 	    size=0, 
 	    datalength=Out#out.datalength+length(Out#out.data)}.
-
 
 close_out(Out)->
     Out2=save(Out),
@@ -285,53 +307,53 @@ open_in(InName,CoreID)->
 
 decoder(FolderName,DetsName,CoreID,GU,PID)->
     {ok,Dets} = dets:open_file(DetsName,[]),
-    dets:delete_all_objects(Dets),		      
-    Out=open_out(Dets,CoreID),
-    In =open_in(lists:concat([atom_to_list(FolderName),"/trace_gabi"]),CoreID), 
+    ok = dets:delete_all_objects(Dets),		      
+    Out = open_out(Dets,CoreID),
+    In = open_in(atom_to_list(FolderName) ++ "/trace_gabi", CoreID), 
     Return = {decoder,{CoreID,decode(In,Out,GU)}},
-    dets:close(Dets),
-    PID!Return.
-
+    ok = dets:close(Dets),
+    PID ! Return,
+    ok.
 
 decode_all(FolderName,DetsNameList,GU,{FromCore,ToCore})->
-    lists:map(fun(CoreID)->
-		      DetsName=lists:nth(CoreID-FromCore+1,DetsNameList),
-		      spawn(ibap,decoder,[FolderName,DetsName,CoreID,GU,self()])
-	      end, lists:seq(FromCore,ToCore)),
-    lists:map(fun(_)->
-		      receive
-			  {decoder,N}->
-			      N
-		      end end, lists:seq(FromCore,ToCore)).
+    List = lists:seq(FromCore, ToCore),
+    lists:foreach(fun(CoreID)->
+			  DetsName = lists:nth(CoreID-FromCore+1,DetsNameList),
+			  Self = self(),
+			  spawn(fun () ->
+					decoder(FolderName, DetsName, CoreID, GU, Self)
+				end)
+		  end, List),
+    [receive {decoder, N} -> N end || _ <- List].
 
 generate_zoom_lvl(PID,DetsName,CoreID,MaxZoomOut,Z0MaxKey,CoreN)->
     {ok,Dets}=dets:open_file(DetsName),
-    lists:map(fun(OldZoom)->
-		      MaxKey = qutils:ceiling(Z0MaxKey/math:pow(2,OldZoom)),
-		      traverse(Dets,CoreID,OldZoom,lists:seq(1,MaxKey))
-	      end,lists:seq(0,MaxZoomOut)),
-    if CoreID == 1 ->
-	    dets:insert(Dets,{init_state,MaxZoomOut,CoreN});
-       true ->ok
+    lists:foreach(fun(OldZoom)->
+			  MaxKey = qutils:ceiling(Z0MaxKey/math:pow(2,OldZoom)),
+			  traverse(Dets,CoreID,OldZoom,lists:seq(1,MaxKey))
+		  end, lists:seq(0,MaxZoomOut)),
+    if CoreID =:= 1 ->
+	    ok = dets:insert(Dets, {init_state,MaxZoomOut,CoreN});
+       true -> ok
     end,
-    dets:close(Dets),
-    PID!done.
-		      
+    ok = dets:close(Dets),
+    PID ! done,	      
+    ok.
 
 generate_zoom_lvls(DetsNameList,{FromCore,ToCore},MaxZoomOut,Z0MaxLength)->
     Z0MaxKeys=lists:map(fun({CoreID,X})->
 				{CoreID,qutils:ceiling(X/?DETS_PACK_SIZE)}
 			end,Z0MaxLength),
-    lists:map(fun({CoreID,Z0MaxKey})->
-		      DetsName=lists:nth(CoreID-FromCore+1,DetsNameList),
-		      spawn(?MODULE,generate_zoom_lvl,
-			    [self(),DetsName,CoreID,MaxZoomOut,Z0MaxKey,ToCore-FromCore+1])
-	      end,Z0MaxKeys),
-    lists:map(fun(_)->
-		      receive
-			  done->ok
-		      end end,lists:seq(FromCore,ToCore)).
-
+    lists:foreach(fun({CoreID,Z0MaxKey})->
+			  DetsName=lists:nth(CoreID-FromCore+1,DetsNameList),
+			  Self = self(),
+			  spawn(fun() -> generate_zoom_lvl(Self,DetsName,CoreID,
+							   MaxZoomOut,Z0MaxKey,
+							   ToCore-FromCore+1)
+				end)
+		  end, Z0MaxKeys),
+    _ = [receive done -> ok end || _ <- lists:seq(FromCore,ToCore)],
+    ok.
 
 traverse(Dets,CoreID,OldZoom,[Key1,Key2|Keys])->
     case dets:lookup(Dets,{OldZoom,Key1}) of
@@ -339,13 +361,11 @@ traverse(Dets,CoreID,OldZoom,[Key1,Key2|Keys])->
 	[{_K1,Values1}]->
 	    case dets:lookup(Dets,{OldZoom,Key2}) of
 		[]->
-		    Values=cets:zoom_out(Values1),
-		    dets:insert(Dets,{{OldZoom+1,(Key1+1) div 2},
-				      Values});
+		    Values = cets:zoom_out(Values1),
+		    ok = dets:insert(Dets, {{OldZoom+1,(Key1+1) div 2},Values});
 		[{_K2,Values2}]->
-		    Values=cets:zoom_out(<<Values1/binary,Values2/binary>>),
-		    dets:insert(Dets,{{OldZoom+1,Key2 div 2},
-				      Values}),
+		    Values = cets:zoom_out(<<Values1/binary,Values2/binary>>),
+		    ok = dets:insert(Dets, {{OldZoom+1,Key2 div 2},Values}),
 		    traverse(Dets,CoreID,OldZoom,Keys)
 	    end
     end;
@@ -358,53 +378,16 @@ traverse(Dets,CoreID,OldZoom,[Key1])->
 traverse(_Dets,_CoreID,_OldZoom,_Keys) ->
     ok.
 
+%% zoom_out([H1,H2|T])->
+%%     [(H1+H2)/2|zoom_out(T)];
+%% zoom_out([H]) ->
+%%     [H/2];
+%% zoom_out([]) ->
+%%     [].
 
-zoom_out([H1,H2|T])->
-    [(H1+H2)/2|zoom_out(T)];
-zoom_out([H]) ->
-    [H/2];
-zoom_out([]) ->
-    [].
+%%----------------------- Tests below ------------------------------
 
-
-
-
-analyze(FolderName,GU,{FromCore,ToCore})->
-    DetsNameList=lists:map(fun(CoreID)->
-				   lists:concat(
-				     [atom_to_list(FolderName),
-				      "/analyzed_trace",
-				      integer_to_list(CoreID)])
-			   end,lists:seq(FromCore,ToCore)),
-    
-    DT=erlang:now(),
-    MaxKeysList=decode_all(FolderName,DetsNameList,GU,{FromCore,ToCore}),
-    Longest=lists:max(lists:map(fun({_,X})->X end,MaxKeysList)),
-    DT2 = erlang:now(),
-    io:write({{decode_time,GU,FolderName},round(timer:now_diff(DT2,DT)/1000000,2)}),io:nl(),
-    MaxZoomLevel=erlang:trunc(math:log(Longest)/math:log(2))+1, % up to 256px
-    DT3=erlang:now(),
-    generate_zoom_lvls(DetsNameList,{FromCore,ToCore},MaxZoomLevel,MaxKeysList),
-    io:write({{zoom_level_time,GU,FolderName},round(timer:now_diff(erlang:now(),DT3)/1000000,2)}),io:nl().
-
-%% analyze(FolderName,GU,CoreN)->
-%%     analyze(FolderName,GU,{1,CoreN}).
-
-%% analyze(FolderName)->
-%%     HName=string:concat(atom_to_list(FolderName),"/trace_gabi_header"),
-%%     {ok,F}=file:open(HName,[read]),
-%%     {ok,CoreN} = io:read(F,''),
-%%     file:close(F),
-%%     analyze(FolderName,?GU,CoreN).
-
-
-%% analyze()->
-%%     analyze(?DEFAULT_FOLDER_NAME).
-
-
-round(N,P)->
-    F=math:pow(10,P),
-    round(N*F)/F.
+-ifdef(TEST).
 
 mass_test()->
     lists:map(fun(CoreN)->
@@ -416,4 +399,4 @@ mass_test()->
 				end,[16])
 	      end,[1,2,4,8,16]).
 
-			     
+-endif.			     

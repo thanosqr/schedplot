@@ -1,5 +1,6 @@
 -module(uds).
--compile(export_all).
+
+-export([init/1]).
 
 -include("hijap.hrl").
 
@@ -18,11 +19,12 @@
 
 -define(QUIT,#wx{id=?EXIT,event=#wxCommand{type=command_menu_selected}}).
 
+%% when using buffdets zoom level refers to the index of the buffered
+%% zoom levels; ie if we buffer 5 zoom levels the possible values are
+%% 1..5 which can refer to n..n+5 actual IDs.
 
-%%when using buffdets zoom level refers to the index of the buffered zoom levels; ie if we buffer 5 zoom levels the possible values are 1..5 which can refer to n..n+5 actual IDs.
-
-
-init(FolderName)->
+-spec init(qijap:folder()) -> 'ok'.
+init(FolderName) ->
     Wx=wx:new(),
     Frame=wxFrame:new(Wx,?ANY,"",[{size,{?WIDTH,?HEIGHT}}]),  
     MenuBar = wxMenuBar:new(),
@@ -30,20 +32,20 @@ init(FolderName)->
     wxMenu:append(File,?EXIT,"Quit"),
     wxMenuBar:append(MenuBar,File,"&File"),
     wxFrame:setMenuBar(Frame,MenuBar),
-    wxFrame:show(Frame),  
-    Panel=create_panel(Frame,?PWIDTH,?PHEIGHT),
+    wxFrame:show(Frame),
+    Panel = create_panel(Frame,?PWIDTH,?PHEIGHT),
     wxFrame:connect(Frame,command_menu_selected),
     wxFrame:connect(Frame,size),
     %%wxFrame:connect(Frame,close_window),
-    Datapack=buffdets:open(FolderName,Panel,Frame),
-    NDatapack=draw(Datapack),
+    Datapack = buffdets:open(FolderName,Panel,Frame),
+    NDatapack = draw(Datapack),
     loop(NDatapack).
 
 create_panel(Frame,W,H)->
-    Panel=wxPanel:new(Frame,[{size,{W,H}},{pos,{42,0}}]),
-    lists:map(fun(XX)->
-		      wxEvtHandler:connect(Panel,XX) 
-	      end, ?CONTROLS),
+    Panel = wxPanel:new(Frame,[{size,{W,H}},{pos,{42,0}}]),
+    lists:foreach(fun(XX) ->
+			  wxEvtHandler:connect(Panel,XX) 
+		  end, ?CONTROLS),
     Panel.
 
 draw(Datapack)->
@@ -80,32 +82,29 @@ draw(Datapack,Paint)->
 		 NDatapack#buffdets.scarlet,
 		 NDatapack#buffdets.vzoom),
     NDatapack.
-    
 
-loop(Datapack)->
+loop(Datapack) ->
     receive
-	?QUIT->
+	?QUIT ->
 	    wxWindow:close(Datapack#buffdets.frame,[]),
 	    wx:destroy();
-	WxEvent when erlang:is_record(WxEvent,wx)->
-	    case change_state(WxEvent,Datapack) of
-		same->
-		    NNDatapack=Datapack;
-		NDatapack->
-		    NNDatapack=draw(NDatapack)
-	    end,
+	#wx{} = WxEvent ->
+	    NNDatapack = case change_state(WxEvent,Datapack) of
+			     same -> Datapack;
+			     NDatapack -> draw(NDatapack)
+			 end,
 	    case NNDatapack#buffdets.mode of
-		ready->
+		ready ->
 		    loop(NNDatapack);
 		update ->
 		    receive
-			{new_buffer,N3Datapack}->
+			{new_buffer, N3Datapack} ->
 			    loop(N3Datapack)
 		    end
 	    end
     end.
 
-change_state(How,Datapack)->
+change_state(How, Datapack) ->
     {ZoomLvl,Xpos} = Datapack#buffdets.pos,
     {_,Xoff} = Datapack#buffdets.offset,
     case change_decode(How) of

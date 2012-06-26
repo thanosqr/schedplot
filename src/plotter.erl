@@ -1,6 +1,11 @@
 -module(plotter).
--compile(export_all).
+
+-export([create_labels/2,scarlet/6,
+	 drawGrid/6, drawCoreLines/6,
+	 label_portray/1]).
+
 -include("hijap.hrl").
+
 -define(GRAPH_HEIGHT,127).
 -define(SPACE_BETW_CORES,25).
 -define(LGrey,?wxLIGHT_GREY_PEN).
@@ -11,10 +16,10 @@
 
 -define(DEF_C,?MGrey).
 
-clear_canvas(Panel)->
-    Paint = wxBufferedPaintDC:new(Panel),
-    wxDC:clear(Paint),
-    wxBufferedPaintDC:destroy(Paint).
+%% clear_canvas(Panel)->
+%%     Paint = wxBufferedPaintDC:new(Panel),
+%%     wxDC:clear(Paint),
+%%     wxBufferedPaintDC:destroy(Paint).
 
 %% % Core Line:
 
@@ -31,8 +36,8 @@ clear_canvas(Panel)->
 %%     drawCoreLine(Paint,Values),
 %%     wxBufferedPaintDC:destroy(Paint).
 
-drawLinePoints(Paint,List)->
-    lists:map(fun({A,B})->wxDC:drawLine(Paint,A,B) end,List).
+%% drawLinePoints(Paint,List)->
+%%     lists:map(fun({A,B})->wxDC:drawLine(Paint,A,B) end,List).
 
 
 drawLines(_,[],_,_,_)->
@@ -72,10 +77,10 @@ drawGrid(Paint,{ZOffset,XOffset},{ZoomLvl,XPos},Labels,PHeight,PWidth)->
 
     Offset=AbsOffset rem ?VERTICAL_INT,
     wxDC:setPen(Paint,?LGrey),
-    lists:map(fun(X)->
+    lists:foreach(fun(X)->
 		      wxDC:drawLine(Paint,{X,0},{X,PHeight})
  	      end,lists:seq(-Offset,PWidth-Offset+?VERTICAL_INT,?VERTICAL_INT)),
-    lists:map(fun({L,X,N})->
+    lists:foreach(fun({L,X,N})->
 		      Label_N = ((AbsOffset div ?VERTICAL_INT)+N)*?VERTICAL_INT*ZoomFactor,
 		      wxWindow:move(L,X+21,PHeight+10),
 		      wxStaticText:setLabel(L,label_portray(Label_N))
@@ -120,7 +125,7 @@ scarlet(Paint,FromCore,L,Z,X,VertZ)->
     wxDC:setFont(Paint,wxFont:new(10,?wxFONTFAMILY_SWISS,
 				  ?wxFONTSTYLE_NORMAL,
 				  ?wxFONTWEIGHT_NORMAL)),
-    lists:map(fun({Time,{SID,Label}})->
+    lists:foreach(fun({Time,{SID,Label}})->
 		      if SID>FromCore ->
 			      Y= (SID-FromCore)*(?SPACE_BETW_CORES
 						 +qutils:strunc(VertZ*?GRAPH_HEIGHT)),

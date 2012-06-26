@@ -1,105 +1,86 @@
 -module(qutils).
--compile(export_all).
 
-ceiling(X)->
-    T=trunc(X),
+-export([ceiling/1, sublist/3, zip3/2, reregister/2, maptrunc/1,
+	 strunc/1, round/2]).
+
+-spec ceiling(number()) -> integer().
+ceiling(X) ->
+    T = trunc(X),
     if T == X ->
 	    T;
        true ->
 	    T+1
     end.
 
-select_tail(L) ->
-    select_tail(L,[]).
-select_tail([T],L)->
-    {L,T};
-select_tail([H|T],L)->
-    select_tail(T,[H|L]).
+%% select_tail(L) ->
+%%     select_tail(L,[]).
 
-take(N,L)->
-    take(N,L,[]).
-take(0,Rest,T)->
-    {lists:reverse(T),ok,Rest};
-take(M,[],T) ->
-    {lists:reverse(T),M};
-take(N,[H|T],Acc) ->
-    take(N-1,T,[H|Acc]).
+%% select_tail([T],L) ->
+%%     {L,T};
+%% select_tail([H|T],L) ->
+%%     select_tail(T,[H|L]).
 
-take_from_tail(N,L)->
-    RL = lists:reverse(L),
-    case take(N,RL) of
-	{T,ok,Rest}->
-	    {lists:reverse(T),ok,lists:reverse(Rest)};
-	{T,M} ->
-	    {lists:reverse(T),M}
-    end.
+%% take(N,L) ->
+%%     take(N,L,[]).
+
+%% take(0,Rest,T) ->
+%%     {lists:reverse(T),ok,Rest};
+%% take(M,[],T) ->
+%%     {lists:reverse(T),M};
+%% take(N,[H|T],Acc) ->
+%%     take(N-1,T,[H|Acc]).
+
+%% take_from_tail(N,L) ->
+%%     RL = lists:reverse(L),
+%%     case take(N,RL) of
+%% 	{T,ok,Rest} ->
+%% 	    {lists:reverse(T),ok,lists:reverse(Rest)};
+%% 	{T,M} ->
+%% 	    {lists:reverse(T),M}
+%%     end.
+
 		
-% lists:sublist(L,P,D) will fail if P > lenght(L) + 1
-% instead, we want it to return an empty list
+%% lists:sublist(L,P,D) will fail if P > length(L) + 1
+%% instead, we want it to return an empty list
 
-sublist(List,Index,Len)->
-		if length(List) > Index ->
-						lists:sublist(List,Index,Len);
-			 true ->
-				lists:map(fun(_)->0 end,lists:seq(1,Len))
-		end.
+-spec sublist(list(), non_neg_integer(), non_neg_integer()) -> list().
+sublist(List, Index, Len) ->
+    if length(List) > Index ->
+	    lists:sublist(List, Index, Len);
+       true ->
+	    lists:duplicate(Len, 0)
+    end.
 
-zip3(A,B)->
-	lists:zip3(
-	  lists:sublist(A,length(B)),
-	  lists:sublist(B,length(A)),
-	  lists:reverse(lists:seq(min(length(A),length(B))-1,0,-1))
-	 ).
+-spec zip3([A], [B]) -> [{A,B,integer()}].
+zip3(A, B) ->
+    lists:zip3(
+      lists:sublist(A,length(B)),
+      lists:sublist(B,length(A)),
+      lists:reverse(lists:seq(min(length(A),length(B))-1,0,-1))
+     ).
 
-reregister(Name,PID)->
-	case lists:member(Name,erlang:registered()) of
-		true->
-			unregister(Name);
-		false ->
-			ok
-	end,
-	register(Name,PID).
+-spec reregister(atom(), pid()) -> 'ok'.			
+reregister(Name, PID) ->
+    case lists:member(Name, erlang:registered()) of
+	true ->
+	    unregister(Name);
+	false ->
+	    ok
+    end,
+    true = register(Name, PID),
+    ok.
 
+-spec maptrunc([float()]) -> [non_neg_integer()].
+maptrunc(L) ->
+    [strunc(X) || X <- L].
 
-maptrunc(L)->
-    lists:map(fun(X)->
-		      strunc(X)
-	      end,L).
-
-strunc(X) when (X<1) and (X>0) ->
+-spec strunc(float()) -> non_neg_integer().
+strunc(X) when 0 < X, X < 1 ->
     1;
-strunc(X) ->
+strunc(X) when 0 =< X ->
     trunc(X).
 
-
-
-flag_check(Valid,Flags)->
-    case lists:filter(fun(F)->
-			case lists:member(F,Valid) of
-			    true -> false;
-			    false -> true
-			end
-		end,Flags) of
-	[] ->
-	    ok;
-	L ->
-	    io:format("Warning: invalid flag(s): "),
-	    io:write(L),
-	    io:nl()
-    end.
-
-conflicting_flags(Confl,Flags)->
-    case lists:filter(fun(C)->
-			      lists:member(C,Flags)
-		      end,Confl) of
-	[] ->
-	    ok;
-	[_] ->
-	    ok;
-	[H|T] ->
-	    io:format("Warning: conflicting flags: "),
-	    io:write([H|T]),
-	    io:format(", using "),
-	    io:write(H),
-	    io:nl()	    
-    end.
+-spec round(float(), non_neg_integer()) -> float().
+round(F, P) ->
+    R = math:pow(10, P),
+    round(F*R)/R.
