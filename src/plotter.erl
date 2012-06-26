@@ -65,10 +65,10 @@ drawCoreLine(Paint,Lengths,Yo,PWidth,VertZ)->
     wxDC:setPen(Paint,?DEF_C),
     drawLines(Paint,Lengths,0,Yo,VertZ).
 
--spec drawCoreLines(wxpaint(), [cets:seven_bit_list()],[wxlabel],
+-spec drawCoreLines(wxpaint(), [cets:seven_bit_list()],[wxlabel()],
 					non_neg_integer(),
 					non_neg_integer(),
-					non_neg_integer()) ->
+					float()) ->
 						   'ok'.
 drawCoreLines(Paint,CLs,SLs,PWidth,PHeight,VertZ)->
     drawCoreLines(Paint,CLs,qutils:strunc(VertZ*?GRAPH_HEIGHT)+?SPACE_BETW_CORES,
@@ -105,8 +105,8 @@ drawGrid(Paint,{ZOffset,XOffset},{ZoomLvl,XPos},Labels,PHeight,PWidth)->
 	      end, qutils:zip3(Labels,lists:seq(-Offset,PWidth-Offset,?VERTICAL_INT))),
     wxDC:setPen(Paint,?DEF_C).
 
--spec create_labels(wxframe(), non_neg_integer)->
-						   [wxlabel()].
+-spec create_labels(wxframe(), non_neg_integer())->
+			   [wxlabel()].
 create_labels(Frame,N)->
     lists:map(fun(_)->
 		      wxStaticText:new(Frame,?ANY,"")

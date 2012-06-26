@@ -87,21 +87,23 @@ loop(Datapack) ->
     receive
 	?QUIT ->
 	    wxWindow:close(Datapack#buffdets.frame,[]),
-	    wx:destroy();
+	    ok = wx:destroy(),
+	    ok;
 	#wx{} = WxEvent ->
 	    NNDatapack = case change_state(WxEvent,Datapack) of
 			     same -> Datapack;
 			     NDatapack -> draw(NDatapack)
 			 end,
-	    case NNDatapack#buffdets.mode of
-		ready ->
-		    loop(NNDatapack);
-		update ->
-		    receive
-			{new_buffer, N3Datapack} ->
-			    loop(N3Datapack)
-		    end
-	    end
+	    FinalDatapack = case NNDatapack#buffdets.mode of
+				ready ->
+				    NNDatapack;
+				update ->
+				    receive
+					{new_buffer, N3Datapack} ->
+					    N3Datapack
+				    end
+			    end,
+	    loop(FinalDatapack)
     end.
 
 change_state(How, Datapack) ->

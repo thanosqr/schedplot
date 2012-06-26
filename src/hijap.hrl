@@ -1,3 +1,5 @@
+-export_types([buffdets/0]).
+
 -include_lib("wx/include/wx.hrl").
 
 -define(DETS_PACK_SIZE,4096).
@@ -52,4 +54,4 @@
 		   fromCore=0,
 		   vzoom=16/127
 		  }).
--opaque buffdets() :: #buffdets{}.
+-type buffdets() :: #buffdets{}.

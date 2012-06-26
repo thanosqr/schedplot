@@ -2,6 +2,8 @@
 
 -export([analyze/3]).
 
+-export_types([core_id/0]).
+
 -include("hijap.hrl").
 
 -record(bytes,{file,
@@ -45,10 +47,7 @@
 
 analyze(FolderName, GU, {FromCore,ToCore})->
     DetsNameList=lists:map(fun(CoreID)->
-				   lists:concat(
-				     [atom_to_list(FolderName),
-				      "/analyzed_trace",
-				      integer_to_list(CoreID)])
+				   FolderName++"/analyzed_trace"++integer_to_list(CoreID)
 			   end,lists:seq(FromCore,ToCore)),
     DT = erlang:now(),
     MaxKeysList = decode_all(FolderName,DetsNameList,GU,{FromCore,ToCore}),
@@ -309,7 +308,7 @@ decoder(FolderName,DetsName,CoreID,GU,PID)->
     {ok,Dets} = dets:open_file(DetsName,[]),
     ok = dets:delete_all_objects(Dets),		      
     Out = open_out(Dets,CoreID),
-    In = open_in(atom_to_list(FolderName) ++ "/trace_gabi", CoreID), 
+    In = open_in(FolderName ++ "/trace_gabi", CoreID), 
     Return = {decoder,{CoreID,decode(In,Out,GU)}},
     ok = dets:close(Dets),
     PID ! Return,
