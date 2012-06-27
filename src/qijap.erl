@@ -17,7 +17,7 @@
 
 -define(AN_FLAGS, []).
 -define(AN_CONFL, []).
--define(START_FLAGS, [gc, no_auto_stop, trace_all]).
+-define(START_FLAGS, [gc, no_auto_stop, trace_all, trace_mfa]).
 
 -spec start(function()) -> 'ok'.
 start(Fun) ->
@@ -53,6 +53,12 @@ analyze(FolderName, Flags) ->
     HName = FolderName ++ "/trace_gabi_header",
     {ok, F} = file:open(HName, [read]),
     {ok, CoreN} = io:read(F, ''),
+    _ = io:read(F, ''),
+    {ok, FullPacket} = io:read(F, ''),
+    Mode = case FullPacket of
+               true -> 'full_packet';
+               false -> 'time_packet'
+           end,
     ok = file:close(F),
     ok = check_flags(Flags, ?AN_FLAGS),
     ok = conflicting_flags(Flags, ?AN_CONFL),    
@@ -60,7 +66,7 @@ analyze(FolderName, Flags) ->
 	      false -> ?GU;
 	      {group, GU} -> GU
 	  end,
-    ibap:analyze(FolderName, NGU, {1, CoreN}).
+    ibap:analyze(FolderName, NGU, {1, CoreN}, Mode).
 
 -spec view() -> 'ok'.
 view() ->

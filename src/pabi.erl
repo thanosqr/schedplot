@@ -61,12 +61,12 @@ add(Pack1, Pack2, S) ->
     	    add(Pack1, Pack2, store(S));
     	N ->
     	    {Encoded,NFamdict,NPrevTime} = 
-    		encode(Pack1, Pack2, S#pabi.famdict, S#pabi.prevtime),
+				encode(Pack1, Pack2, S#pabi.famdict, S#pabi.prevtime),
     	    NData = update(Encoded,S#pabi.data),
     	    S#pabi{famdict=NFamdict,
-		   data=NData,
-		   size=N+1,
-		   prevtime=NPrevTime}
+				   data=NData,
+				   size=N+1,
+				   prevtime=NPrevTime}
     end.
 
 update(Encoded,Data) ->
@@ -98,13 +98,13 @@ store(S) ->
 %%%%     {B,F,P}.
 encode({in,{PID,MFAin,TimeIn}},{out,{PID,MFAout,TimeOut}},Famdict,PrevTime)->
     PIDbytes = pid_encode(PID),			
-    {MFAbytes,NFamdict,Fo,Fm} = mfa_encode(MFAin,MFAout,Famdict)
+    {MFAbytes,NFamdict,Fo,Fm} = mfa_encode(MFAin,MFAout,Famdict),
     TimeBytes = time_encode(TimeIn,PrevTime),
     DurationBytes = duration_encode(TimeIn,TimeOut,Fo,Fm),
     NPrevTime=TimeOut,
     {[DurationBytes,TimeBytes,PIDbytes,MFAbytes],NFamdict,NPrevTime};
 
-encode({in,TimeIn},{out,TimeOut},Famdict,PrevTime)->
+encode({in,{TimeIn}},{out,{TimeOut}},Famdict,PrevTime)->
     TimeBytes = time_encode(TimeIn,PrevTime),
     DurationBytes = duration_encode(TimeIn,TimeOut,0,0),
     NPrevTime=TimeOut,
@@ -116,7 +116,7 @@ encode(_, _, F, P) ->
 
 pid_encode(PID)->
     BID=term_to_binary(PID),
-    <<X:8,Y:8,_/binary>>=binary:part(BID,byte_size(BID),-7),
+    <<X:8,Y:8,_/binary>> = binary:part(BID,byte_size(BID),-7),
     <<0:1,X:7,Y:8>>.
 
 mfa_encode(MFA,MFA,Famdict)->
