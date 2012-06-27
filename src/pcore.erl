@@ -102,7 +102,7 @@ tracer(Pabi, Prev) ->
 				    Pabi;
 				_ ->
 				    pabi:add(Prev, {out,Msg}, Pabi)
-			    end
+			    end;
 	    end,
 	    tracer(NPabi, NPrev);
 	{exit,PID} ->
