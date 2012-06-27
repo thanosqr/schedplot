@@ -41,7 +41,7 @@ open(NameData, NameFamDict, PrevTime, Flags) ->
 		  true ->
 		      famdict:new(NameFamDict);
 		  false ->
-		      42
+		      not_traced
 	      end,
     #pabi{file = S,
 	  famdict = FamDict,
@@ -96,24 +96,21 @@ store(S) ->
 %%%% encode(P1,P2,F,P)->
 %%%%     B=term_to_binary({P1,P2}),
 %%%%     {B,F,P}.
-encode({PID,in,MFAin,TimeIn},{PID,out,MFAout,TimeOut},Famdict,PrevTime)->
-    case Famdict of
-	42 -> 
-	    Fo = 0,
-	    Fm = 0,
-	    MFAbytes = <<0:8>>,
-	    PIDbytes = <<0:16>>,
-	    NFamdict = 42;
-	_ ->
-	    PIDbytes = pid_encode(PID),			
-	    {MFAbytes,NFamdict,Fo,Fm} = mfa_encode(MFAin,MFAout,Famdict)
-    end,
+encode({in,{PID,MFAin,TimeIn}},{out,{PID,MFAout,TimeOut}},Famdict,PrevTime)->
+    PIDbytes = pid_encode(PID),			
+    {MFAbytes,NFamdict,Fo,Fm} = mfa_encode(MFAin,MFAout,Famdict)
     TimeBytes = time_encode(TimeIn,PrevTime),
     DurationBytes = duration_encode(TimeIn,TimeOut,Fo,Fm),
     NPrevTime=TimeOut,
     {[DurationBytes,TimeBytes,PIDbytes,MFAbytes],NFamdict,NPrevTime};
 
-encode({_PID1,in,_MFA1,_T1},{_PID2,out,_MFA2,_T2},F,P) ->
+encode({in,TimeIn},{out,TimeOut},Famdict,PrevTime)->
+    TimeBytes = time_encode(TimeIn,PrevTime),
+    DurationBytes = duration_encode(TimeIn,TimeOut,0,0),
+    NPrevTime=TimeOut,
+    {[DurationBytes,TimeBytes],Famdict,NPrevTime};
+
+encode(_, _, F, P) ->
 %   --diff PID error--
     {<<0:8>>,F,P}.
 

@@ -100,8 +100,8 @@ mlookup(M,[M|_],N)->
 mlookup(M,[_|Ms],N) ->
     mlookup(M,Ms,N-1).
 
--spec close(famdict()) -> 'ok' | {'error', atom()}.
-close(42) -> ok;
+-spec close(famdict() | 'not_traced' ) -> 'ok' | {'error', atom()}.
+close(not_traced) -> ok;
 close(D) ->
     ok = save([D#famdict.current|D#famdict.old],D#famdict.file),
     file:close(D#famdict.file).

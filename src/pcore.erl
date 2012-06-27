@@ -28,7 +28,9 @@ start(Fun, FolderName, CoreN, Flags) ->
 				   end) 
 		     end, lists:seq(1,CoreN)),
     PID = spawn(fun()->
-			master_tracer(array:fix(array:from_list(PIDs)),42)
+			master_tracer(array:fix(array:from_list(PIDs)),
+				      array:get(array:size(PIDs)-1,PIDs),
+				      lists:member(store_proc_info,Flags))
 		end),
     qutils:reregister(master_tracer,PID),
     TFlags = [running,scheduler_id,timestamp,set_on_spawn,{tracer,PID}],
@@ -89,25 +91,21 @@ start_tracer(FolderName, N, Flags, Now) ->
 
 tracer(Pabi, Prev) ->
     receive
-	{PID,IO,MFA,Time} ->
-	    P2 = {PID,IO,MFA,Time},
-	    case IO of
-		in -> 
-		    NPrev = P2,
+	{IO,Msg} ->
+	    if IO == in ; IO == gc_start ->
+		    NPrev = {in, Msg},
 		    NPabi = Pabi;
-		out ->
-		    case Prev of
-			null ->
-			    NPrev = null,
-			    NPabi = Pabi;
-			_ ->
-			    NPrev = null,
-			    NPabi = pabi:add(Prev,P2,Pabi)
-		    end
+		IO == out ; IO == gc_end  ->
+		    NPrev = null,
+		    NPabi = case Prev of
+				null ->
+				    Pabi;
+				_ ->
+				    pabi:add(Prev, {out,Msg}, Pabi)
+			    end
 	    end,
 	    tracer(NPabi, NPrev);
 	{exit,PID} ->
-	    c:flush(),
 	    ok = pabi:close(Pabi),
 	    PID!ok
     end.
@@ -115,7 +113,7 @@ tracer(Pabi, Prev) ->
 %%io:wait_io_mon_reply/2 appears to only enter 
 %%the schedulers (and never leave)
 %%possibly a problem with trace&io;  we ignore those messages
-master_tracer(PIDs,SS)->
+master_tracer(PIDs,GC_PID,Mode)->
     receive
 	{trace_ts,PID,IO,SID,MFA,Time} ->
 	    case MFA of
@@ -124,25 +122,24 @@ master_tracer(PIDs,SS)->
 		_ ->
 		    %% 0-indexed arrays
 		    TracerPID = array:get(SID-1, PIDs),
-		    TracerPID ! {PID,IO,MFA,Time},
-		    ok
+		    TracerPID ! trim({IO,{PID,MFA,Time}},Mode)
 	    end,
-	    master_tracer(PIDs,SS);
+	    master_tracer(PIDs, GC_PID, Mode);
+
 	{trace_ts,PID,SE,_GC_Info,Time} ->
-	    InOut = case SE of
-			gc_start -> in;
-			gc_end -> out
-		    end,
-	    Msg = {PID,InOut,{gc,gc,0},Time},
-	    array:get(array:size(PIDs)-1,PIDs) ! Msg,
-	    master_tracer(PIDs,SS);
+	    GC_PID ! trim({SE, {PID, {gc,gc,0}, Time}}, Mode),
+	    master_tracer(PIDs, GC_PID, Mode);
+
 	{PID,exit} ->
-%	    file:close(SS),
 	    fwd_rest(PIDs),
 	    _ = [P ! {exit,self()} || P <- array:to_list(PIDs)],
 	    _ = [receive ok -> ok end || _ <- array:to_list(PIDs)],
 	    PID ! trace_stored
     end.		
+
+trim(false, Msg) -> Msg;
+trim(true, {InOut, {_, _, Time}}) -> {InOut, Time}.     
+    
 	
 fwd_rest(PIDs)->	   
 	receive
@@ -204,7 +201,7 @@ T00 = erlang:now(),
 				end) 
 		     end, lists:seq(1,CoreN)),
     PID = spawn(fun()->
-			master_tracer(array:fix(array:from_list(PIDs)),42) 
+			master_tracer(array:fix(array:from_list(PIDs))) 
 		end),
     qutils:reregister(master_tracer,PID),
     lists:foreach(fun(Core)->
