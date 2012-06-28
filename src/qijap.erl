@@ -1,14 +1,13 @@
 -module(qijap).
 
-%% -export([start/1, start/2, start/3, stop/0,
-%% 	 analyze/0, analyze/1, analyze/2,
-%% 	 view/0, view/1, print/1]).
+-export([start/1, start/2, start/3, stop/0,
+	 analyze/0, analyze/1, analyze/2,
+	 view/0, view/1, print/1]).
 
--compile(export_all).
 -export_type([folder/0, label/0, start_flags/0]).
 
--type folder()      :: file:filename().
--type label()       :: string().
+-type folder()      :: file:filename() | atom() | integer().
+-type label()       :: string() | atom() | integer().
 -type anal_flags()  :: []. %% TO BE REVISED
 -type start_flags() :: [start_flag()].
 
@@ -35,7 +34,7 @@ start(Fun, FolderName, Flags) ->
 	    false -> erlang:system_info(schedulers);
 	    true  -> erlang:system_info(schedulers) + 1
 	end,
-    pcore:start(Fun, FolderName, N, Flags).
+    pcore:start(Fun, ensure_string(FolderName), N, Flags).
 
 -spec stop() -> 'ok'.
 stop() ->
@@ -51,7 +50,8 @@ analyze(FolderName) ->
 
 -spec analyze(folder(), anal_flags()) -> 'ok'.
 analyze(FolderName, Flags) ->
-    HName = FolderName ++ "/trace_gabi_header",
+    SFolderName = ensure_string(FodlerName),
+    HName = SFolderName ++ "/trace_gabi_header",
     {ok, F} = file:open(HName, [read]),
     {ok, CoreN} = io:read(F, ''),
     _ = io:read(F, ''),
@@ -67,7 +67,7 @@ analyze(FolderName, Flags) ->
 	      false -> ?GU;
 	      {group, GU} -> GU
 	  end,
-    ibap:analyze(FolderName, NGU, {1, CoreN}, Mode).
+    ibap:analyze(SFolderName, NGU, {1, CoreN}, Mode).
 
 -spec view() -> 'ok'.
 view() ->
@@ -75,11 +75,22 @@ view() ->
 
 -spec view(folder()) -> 'ok'.
 view(FolderName) ->
-    viewer:start(FolderName).
+    viewer:start(ensure_string(FolderName)).
 
 -spec print(label()) -> 'ok'.
 print(Label) ->
-    scarlet:print(Label).
+    scarlet:print(ensure_string(Label)).
+
+ensure_string(Name) when is_atom(Name) ->
+    atom_to_list(Name);
+ensure_string(Name) when is_integer(Name) ->
+    integer_to_list(Name);
+ensure_string(Name) when is_list(Name) ->
+    Name;
+ensure_string(_) -> 
+    {error, expecting_atom_integer_or_string}.
+
+
 
 %%----------------------------------------------------------%%	
 %%--------------------- local functions --------------------%%
@@ -105,7 +116,7 @@ conflicting_flags(_Flags, _Confls) ->
 %%-------------------------- testing -----------------------%%
 %%----------------------------------------------------------%%	
 
-%-ifdef(TEST).
+-ifdef(TEST).
 
 list(X) ->
     start({lists,seq,[1,X*1000*100]},[trace_all]).
@@ -214,4 +225,4 @@ overlap([V1|T1], [V2|T2]) ->
 	    overlap(T1, T2)
     end.
 
-%-endif.
+-endif.
