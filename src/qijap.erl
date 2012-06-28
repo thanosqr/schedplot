@@ -1,9 +1,10 @@
 -module(qijap).
 
--export([start/1, start/2, start/3, stop/0,
-	 analyze/0, analyze/1, analyze/2,
-	 view/0, view/1, print/1]).
+%% -export([start/1, start/2, start/3, stop/0,
+%% 	 analyze/0, analyze/1, analyze/2,
+%% 	 view/0, view/1, print/1]).
 
+-compile(export_all).
 -export_type([folder/0, label/0, start_flags/0]).
 
 -type folder()      :: file:filename().
@@ -74,7 +75,7 @@ view() ->
 
 -spec view(folder()) -> 'ok'.
 view(FolderName) ->
-    uds:init(FolderName).
+    viewer:start(FolderName).
 
 -spec print(label()) -> 'ok'.
 print(Label) ->
@@ -104,7 +105,7 @@ conflicting_flags(_Flags, _Confls) ->
 %%-------------------------- testing -----------------------%%
 %%----------------------------------------------------------%%	
 
--ifdef(TEST).
+%-ifdef(TEST).
 
 list(X) ->
     start({lists,seq,[1,X*1000*100]},[trace_all]).
@@ -133,7 +134,7 @@ herp(X, P) ->
     P ! done.
 
 seq(X) ->
-    start({?MODULE,derps,[X*1000*1000]},[]).
+    start({?MODULE,derps,[X*1000*1000]}).
 
 derps(X) ->
     %% qijap:print("start"),
@@ -213,4 +214,4 @@ overlap([V1|T1], [V2|T2]) ->
 	    overlap(T1, T2)
     end.
 
--endif.
+%-endif.

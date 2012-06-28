@@ -43,12 +43,18 @@ ceiling(X) ->
 %% lists:sublist(L,P,D) will fail if P > length(L) + 1
 %% instead, we want it to return an empty list
 
--spec sublist(list(), non_neg_integer(), non_neg_integer()) -> list().
-sublist(List, Index, Len) ->
+-spec sublist(list(), integer(), non_neg_integer()) -> list().
+sublist(List, Index, Len) when Index > 0 ->
     if length(List) > Index ->
 	    lists:sublist(List, Index, Len);
        true ->
 	    lists:duplicate(Len, 0)
+    end;
+sublist(List, Index, Len) ->
+    if -Index >= Len ->
+            lists:duplicate(Len,0);
+       true ->
+            lists:duplicate(-Index,0) ++ sublist(List, 1, Len+Index)
     end.
 
 -spec zip3([A], [B]) -> [{A,B,integer()}].

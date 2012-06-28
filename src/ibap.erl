@@ -303,7 +303,7 @@ open_out(Dets,CoreID)->
          size=0}.
 
 open_in(InName,CoreID,Mode)->
-    IName=string:concat(InName,integer_to_list(CoreID)),
+    IName = InName++integer_to_list(CoreID),
     {ok,File}=file:open(IName,[read,raw,compressed]),
     #in{file=#bytes{file=File,data=[],left=0},
         left=0,

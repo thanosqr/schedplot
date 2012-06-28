@@ -1,6 +1,6 @@
 -module(scarlet).
 
--export([open/1, init/2, close/0, print/1, draw/7]).
+-export([open/1, init/2, close/0, print/1, get_visible/4]).
 
 -include("hijap.hrl").
 
@@ -30,17 +30,13 @@ print(Label) ->
     scarlet ! {T, {SID, Label}},
     ok.
 
--spec draw(plotter:wxpaint(), ibap:core_id(),
-		   {non_neg_integer(),non_neg_integer()},
-		   {non_neg_integer(),non_neg_integer()},
-		   non_neg_integer(),non_neg_integer(),non_neg_integer()) ->
-				  'ok'.
-draw(Paint, FromCore, {ZPos,XPos}, {Zoff,Xoff}, Width, D, VertZ) ->
-    Z = round(math:pow(2,ZPos+Zoff+?DEF_GU-1)),  % edit
-    X = (XPos+Xoff-?DETS_PACK_SIZE)*Z,
-    L = dict:to_list(get_from_to(X,X+Width*Z,D)),
-    plotter:scarlet(Paint, FromCore, L, Z, X, VertZ).
-
+-spec get_visible(non_neg_integer(),non_neg_integer(),
+                  non_neg_integer(),dict()) -> dict().
+get_visible(ZPos, XPos, Width, SDict)->
+    Z = round(math:pow(2,ZPos+?DEF_GU)),  % edit
+    X = XPos*Z,
+    dict:to_list(get_from_to(X,X+Width*Z,SDict)).
+   
 loop(Messages, T0, FolderName) ->
     receive
 	{exit, PID} ->
