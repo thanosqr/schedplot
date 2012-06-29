@@ -8,10 +8,6 @@
                 zpos,
                 vzoom = 16/127,
                 coren,
-                left_data,
-                right_data,
-                zoomin_data,
-                zoomout_data,
                 data,
                 frame,
                 panel,
@@ -21,7 +17,8 @@
                 zoom_label,
                 schedlabels,
                 scarlet,
-                fitZoom}).
+                fitZoom,
+                highlight = false}).
 
 -define(HEIGHT_INT,42). % graph height + space between cores in px
 -define(ZOOM_BUFFER,2).
@@ -32,7 +29,8 @@
 -define(STEP_ALT,10).
 -define(STEP_NORM,50).
 -define(STEP_CMD,200).
--define(CONTROLS,[left_up,mousewheel,left_dclick,key_down,size]).
+%-define(CONTROLS,[left_down,left_up,mousewheel,left_dclick,key_down,size]).
+-define(CONTROLS,[key_down,size,right_up,right_down]).
 
 -define(EXIT,?wxID_EXIT).
 
@@ -69,10 +67,6 @@ start(FolderName)->
                                   [{pos,{?PWIDTH+?ZLW,?PHEIGHT+?ZLH}}]),
     State = #state{ zpos  = Zoom,
                     coren = CoreN,
-                    left_data = Width,
-                    right_data = Width,
-                    zoomin_data = Zoom,
-                    zoomout_data = 3,
                     data = [HBets|TBets],
                     frame = Frame,
                     panel = Panel,
@@ -97,8 +91,9 @@ wx_init()->
     wxFrame:setMenuBar(Frame,MenuBar),
     wxFrame:show(Frame),
     Panel = create_panel(Frame,?PWIDTH,?PHEIGHT),
-    wxFrame:connect(Frame,command_menu_selected),
-    wxFrame:connect(Frame,size),
+    lists:foreach(fun(XX) ->
+                          wxEvtHandler:connect(Frame,XX) 
+                  end, [command_menu_selected,size]),
     {Frame,Panel}.
                     
 create_panel(Frame,W,H)->
@@ -117,6 +112,11 @@ draw(State) ->
     NState.
    
 draw(State,Paint) ->
+    case State#state.highlight of
+        false   -> ok;
+        {X1,X2} -> wxplot:highlight(Paint,X1,X2,
+                                    State#state.height+?PH_DIFF)
+    end,
     wxplot:drawGrid(Paint,
                     State#state.zpos,
                     State#state.xpos,
@@ -215,54 +215,32 @@ change_state(How, State) ->
             wxPanel:destroy(State#state.panel),
             State#state{width=W,
                               height=H,
-                              panel=create_panel(State#state.frame,
-                                                 W+?PW_DIFF,H+?PH_DIFF)};
+                        panel=create_panel(State#state.frame,
+                                           W+?PW_DIFF,H+?PH_DIFF)};
         {left, Step}->
-            if State#state.left_data>=Step ->
-                    State#state{xpos = Xpos - Step,
-                                left_data=State#state.left_data - Step,
-                                right_data=State#state.right_data + Step};
-               true -> same
-            end;
+            State#state{xpos = Xpos - Step};
         {right, Step}->
-            if State#state.right_data>=Step ->
-                    State#state{xpos = Xpos + Step,
-                                left_data=State#state.left_data + Step,
-                                right_data=State#state.right_data - Step};
-               true -> same
-            end;
-
+            State#state{xpos = Xpos + Step};
         zoom_in->
-            if State#state.zoomin_data>0 ->
-                    State#state{zpos = Zpos-1,
-                                xpos = Xpos*2-1,
-                                left_data=2*State#state.left_data,
-                                right_data=2*State#state.right_data,
-                                zoomin_data=State#state.zoomin_data-1,
-                                zoomout_data=State#state.zoomout_data+1};
-               true -> same
+            case State#state.highlight of
+                false ->
+                    if Zpos > 0 ->
+                            State#state{zpos = Zpos-1, xpos = Xpos*2-1};
+                       true -> same
+                    end;
+                {X1,X2} ->
+                    zoom_to_selection(State#state{highlight=false},X1,X2)
             end;
         zoom_out->
-            if State#state.zoomout_data>0 ->
-                    State#state{zpos = Zpos+1,
-                                xpos = (Xpos +1) div 2,
-                                left_data=State#state.left_data div 2,
-                                right_data=State#state.right_data div 2,
-                                zoomin_data=State#state.zoomin_data+1,
-                                zoomout_data=State#state.zoomout_data-1};
-               true -> same
-            end;
+            State#state{zpos = Zpos+1, xpos = (Xpos +1) div 2};
         reset->
             State#state{ zpos = State#state.fitZoom,
                          xpos = 1,
                          fromCore = 0,
                          vzoom = 16/127,
-                         left_data = State#state.width,
-                         right_data = State#state.width,
-                         zoomin_data = State#state.fitZoom,
-                         zoomout_data = 3,
                          width = State#state.width,
-                         height = State#state.height
+                         height = State#state.height,
+                         highlight = false
                        };
         {core_up,CN}->
             FromCore = State#state.fromCore,
@@ -281,6 +259,10 @@ change_state(How, State) ->
                true->
                     same
             end;
+        {highlight, X1, X2} ->
+            State#state{highlight={X1,X2}};
+        highlight_off ->
+            State#state{highlight=false};
         print->
             %% {_,_,T}=erlang:now(),
             %% N=lists:concat([atom_to_list(print),integer_to_list(T),atom_to_list('.bmp')]),
@@ -302,6 +284,13 @@ change_state(How, State) ->
             same
     end.
 
+zoom_to_selection(State,X1,X2)->
+    Zpos   = State#state.zpos,
+    Width  = State#state.width,
+    NZpos  = max(0,Zpos - trunc(math:log(Width/(X2-X1))/math:log(2))),
+    NXpos  = round((State#state.xpos + X1)*math:pow(2,Zpos-NZpos)),
+    State#state{zpos = NZpos,
+                xpos = NXpos}.
                                 
 change_decode(#wx{event=#wxKey{keyCode=?WXK_NUMPAD_ADD}})->
     zoom_in;
@@ -337,6 +326,19 @@ change_decode(#wx{event=#wxSize{size={W,H}}}) ->
     {resize,W,H};
 change_decode(#wx{event=#wxKey{keyCode=80}})->
     print;
+change_decode(#wx{event=#wxMouse{rightDown=true, x=X1}})->
+    receive
+        #wx{event=#wxMouse{rightDown=false, x=X2}}-> ok
+    end,
+    if X1 == X2 ->
+            same;
+       X1 > X2 ->
+            {highlight, X2, X1};
+       X1 < X2 ->
+            {highlight, X1, X2}
+    end;
+change_decode(#wx{event=#wxKey{keyCode=?WXK_ESCAPE}})->
+    highlight_off;
 change_decode(_) ->
     same.
 

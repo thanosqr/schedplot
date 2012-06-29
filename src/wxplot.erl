@@ -1,8 +1,10 @@
 -module(wxplot).
 
 -export([drawScarlet/6,
-	 drawGrid/6, drawGraph/6,
-	 label_portray/1]).
+         drawGrid/6, 
+         drawGraph/6,
+         label_portray/1,
+         highlight/4]).
 
 -export_type([wxpaint/0, wxpanel/0, wxframe/0, 
 			  wxlabel/0]).
@@ -22,7 +24,17 @@
 -define(Grey,?wxGREY_PEN).
 -define(Red,?wxRED_PEN).
 
+-define(HLIGHT, ?wxCYAN_PEN).
 -define(DEF_C,?MGrey).
+
+-spec highlight(wxpaint(), non_neg_integer(),
+                non_neg_integer(), non_neg_integer()) -> 'ok'.
+highlight(Paint, X1, X2, Y) ->
+    wxDC:setPen(Paint,?HLIGHT),
+    wxDC:drawRectangle(Paint,{X1,0,X2-X1,Y}),
+    wxDC:drawRectangle(Paint,{X1+1,1,X2-X1-2,Y-2}),
+    wxDC:setPen(Paint,?DEF_C).
+    
 
 -spec label_portray(integer()) -> qijap:label().
 label_portray(N) when N < 0 ->
