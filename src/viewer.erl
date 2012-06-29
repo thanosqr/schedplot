@@ -214,7 +214,7 @@ change_state(How, State) ->
         {resize,W,H}->
             wxPanel:destroy(State#state.panel),
             State#state{width=W,
-                              height=H,
+                        height=H,
                         panel=create_panel(State#state.frame,
                                            W+?PW_DIFF,H+?PH_DIFF)};
         {left, Step}->
@@ -323,7 +323,11 @@ change_decode(#wx{event=#wxKey{keyCode=?WXK_UP,altDown=false}}) ->
 change_decode(#wx{event=#wxKey{keyCode=?WXK_DOWN,altDown=false}}) ->
     {core_down,1};
 change_decode(#wx{event=#wxSize{size={W,H}}}) ->
-    {resize,W,H};
+    receive 
+        #wx{event=#wxSize{size={W,H}}} = WxE ->
+            change_decode(WxE)
+    after 21 -> {resize,W,H}
+    end;
 change_decode(#wx{event=#wxKey{keyCode=80}})->
     print;
 change_decode(#wx{event=#wxMouse{rightDown=true, x=X1}})->

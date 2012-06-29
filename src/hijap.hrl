@@ -21,7 +21,7 @@
 -define(PHEIGHT,?HEIGHT-100).
 -define(PWIDTH,1000).
 -define(WIDTH,?PWIDTH+84).
--define(PW_DIFF,84).
+-define(PW_DIFF,-84).
 -define(PH_DIFF,-100).
 -define(ZLW,-420).
 -define(ZLH,-60).
