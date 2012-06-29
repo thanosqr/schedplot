@@ -55,11 +55,11 @@ analyze(FolderName, GU, {FromCore,ToCore}, Mode)->
     MaxKeysList = decode_all(FolderName,DetsNameList,GU,{FromCore,ToCore}, Mode),
     Longest = lists:max(lists:map(fun({_,X}) -> X end, MaxKeysList)),
     DT2 = erlang:now(),
-    io:write({{decode_time,GU,FolderName},qutils:round(timer:now_diff(DT2,DT)/1000000,2)}),io:nl(),
+    io:write({{decode_time,GU},qutils:round(timer:now_diff(DT2,DT)/1000000,2)}),io:nl(),
     MaxZoomLevel = erlang:trunc(math:log(Longest)/math:log(2))+1, % up to 256px
     DT3 = erlang:now(),
     generate_zoom_lvls(DetsNameList,{FromCore,ToCore},MaxZoomLevel,MaxKeysList),
-    io:write({{zoom_level_time,GU,FolderName},
+    io:write({{zoom_level_time,GU},
               qutils:round(timer:now_diff(erlang:now(),DT3)/1000000,2)}),
     io:nl().
 

@@ -39,7 +39,7 @@ lookup(D, K) ->
 decode(Bin) ->
     decode_(binary:bin_to_list(Bin)).
 
-decode_([0]) -> [];
+decode_([]) -> [];
 decode_([H1|T])->
     <<B:1,H:7>> = <<H1:8>>,
     case B of
@@ -65,7 +65,7 @@ encode(X) ->
     binary:list_to_bin(encode_(X)).
 
 encode_([]) ->
-    [<<0:8>>];
+    [];
 encode_(L)->
     case get_same(L) of
 	{T,1,H} ->
@@ -113,10 +113,10 @@ get_same([H1,H2|T],A) ->
 zoom_out(Bin) ->
     zo(binary:bin_to_list(Bin)).
 
-zo([0]) ->
-    <<0>>;
-zo([H,0])->
-    zo([H,0,0]);
+zo([]) ->
+    <<>>;
+zo([H])->
+    zo([H,0]);
 zo([H1,H2|T])->
     <<B:1,H:7>> = <<H1:8>>,
     case B of
