@@ -50,7 +50,7 @@ analyze(FolderName) ->
 
 -spec analyze(folder(), anal_flags()) -> 'ok'.
 analyze(FolderName, Flags) ->
-    SFolderName = ensure_string(FodlerName),
+    SFolderName = ensure_string(FolderName),
     HName = SFolderName ++ "/trace_gabi_header",
     {ok, F} = file:open(HName, [read]),
     {ok, CoreN} = io:read(F, ''),

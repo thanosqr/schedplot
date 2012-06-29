@@ -1,7 +1,6 @@
 -module(viewer).
 
-%-export([start/1]).
--compile(export_all).
+-export([start/1]).
 -include("hijap.hrl").
 
 -record(state, {xpos = 1,
@@ -39,22 +38,20 @@
 
 -define(QUIT,#wx{id=?EXIT,event=#wxCommand{type=command_menu_selected}}).
 
--spec start(qijap:folder()) -> 'ok'.
+-spec start(file:filename()) -> 'ok'.
 start(FolderName)->
     {Frame,Panel} = wx_init(),
     Width = ?WIDTH,
     Height = ?HEIGHT,
     Options = [{access, read}],
     Prefix = FolderName ++ "/analyzed_trace",
-    {ok, HTab} = dets:open_file(Prefix ++ "1", Options),
-    [{init_state,Max_Zoom,CoreN}] = dets:lookup(HTab, init_state),
+    HBets = bets:open_file(Prefix ++ "1", Options, 1),
+    [{init_state,Max_Zoom,CoreN}] = bets:plain_lookup_otr(HBets, init_state),
     Zoom=Max_Zoom-trunc(math:log(Width)/math:log(2)), %%zoom_make
-    TTabs = lists:map(fun(CoreID)->
+    TBets = lists:map(fun(CoreID)->
                               FName = Prefix ++ integer_to_list(CoreID),
-                              {ok, Tab} = dets:open_file(FName, Options),
-                              Tab
+                              bets:open_file(FName, Options, CoreID)
                       end, lists:seq(2, CoreN)),
-    Tabs = [HTab|TTabs],
     Labels = create_labels(Frame,?LABEL_N),
     SchedLabels = create_labels(Frame,CoreN-1),
     lists:foreach(fun({X,L})->
@@ -76,7 +73,7 @@ start(FolderName)->
                     right_data = Width,
                     zoomin_data = Zoom,
                     zoomout_data = 3,
-                    data = Tabs,
+                    data = [HBets|TBets],
                     frame = Frame,
                     panel = Panel,
                     width = Width,
@@ -87,8 +84,8 @@ start(FolderName)->
                     scarlet = scarlet:open(FolderName),
                     fitZoom = Zoom
                   },
-    draw(State),
-    loop(State).
+    NState = draw(State),
+    loop(NState).
 
 wx_init()->
     Wx=wx:new(),
@@ -114,12 +111,12 @@ create_panel(Frame,W,H)->
 draw(State) ->
     Paint = wxBufferedPaintDC:new(State#state.panel),    
     wxDC:clear(Paint),
-    draw(State,Paint),
+    NState = draw(State,Paint),
     wxBufferedPaintDC:destroy(Paint),
-    update_zoom_label(State).
+    update_zoom_label(State),
+    NState.
    
 draw(State,Paint) ->
-    ok = requestData(State),
     wxplot:drawGrid(Paint,
                     State#state.zpos,
                     State#state.xpos,
@@ -136,54 +133,50 @@ draw(State,Paint) ->
                        State#state.zpos,
                        State#state.xpos,
                        State#state.vzoom),                   
-    Data = receiveData(),
+    {NBetss, Data} = getData(State),
     wxplot:drawGraph(Paint,Data,
                      State#state.schedlabels,
                      State#state.width+?PW_DIFF,
                      State#state.height+?PH_DIFF,
-                     State#state.vzoom).
+                     State#state.vzoom),
+    State#state{data = NBetss}.
 
-requestData(State)->
-    Tabs  = State#state.data,
+
+getData(State)->
+    Betss  = State#state.data,
     Xpos  = State#state.xpos,
     Zpos  = State#state.zpos,
     Width = State#state.width,
-    Self  = self(),
-    spawn(fun()->
-                  getData(Self,Tabs,Zpos,Xpos,Width)
-          end),
-    ok.
-
-getData(PID,Tabs,Zpos,Xpos,Width)->
     Key = (Xpos div (?DETS_PACK_SIZE+1))+1,       
     ListIndex = Xpos rem (?DETS_PACK_SIZE+1),
-    RawData = if ListIndex + Width =< ?DETS_PACK_SIZE ->
-                      lists:map(fun(CoreTab)->
-                                        cets:lookup(CoreTab,{Zpos,Key})
-                                end, Tabs);
-                 true ->
-                      lists:map(fun(CoreTab)->
-                                        lists:append(
-                                          cets:lookup(CoreTab,{Zpos,Key}),
-                                          cets:lookup(CoreTab,{Zpos,Key+1})
-                                         )
-                                end, Tabs)
-              end,
+    {NBetss, RawData} = if ListIndex + Width =< ?DETS_PACK_SIZE ->
+                                get_from_bets(Betss, {Zpos,Key}, [], [], 1);
+                           true ->
+                                get_from_bets(Betss, {Zpos,Key}, [], [], 2)
+                        end,
     Data = lists:map(fun(CoreData)->
                              qutils:sublist(CoreData,ListIndex,Width)
                      end,RawData),
-    PID ! {data,Data}. 
+    {NBetss, Data}.
 
-receiveData()->
-    receive
-        {data, Data} -> Data
-    end.
-            
-    
+get_from_bets([], _, Data, Betss,_) -> 
+    {lists:reverse(Betss), lists:reverse(Data)};
+get_from_bets([Bets|Betss], Key, DataAcc, BetsAcc,1) ->
+    {NBets, Data} = bets:lookup(Bets, Key),
+    get_from_bets(Betss, Key, [Data|DataAcc], [NBets|BetsAcc],1);
+get_from_bets([Bets|Betss], {ZK,XK}, DataAcc, BetsAcc,2) ->
+    Data1 = bets:lookup_otr(Bets, {ZK, XK}),
+    {NBets, Data2} = bets:lookup(Bets, {ZK, XK+1}),
+    Data = Data1 ++ Data2,
+    get_from_bets(Betss, {ZK,XK}, [Data|DataAcc], [NBets|BetsAcc],2).
+
 
 loop(State)->
     receive
         ?QUIT ->
+            lists:foreach(fun(Bets) -> 
+                                  bets:close(Bets)
+                          end, State#state.data),
             wxWindow:close(State#state.frame,[]),
             ok = wx:destroy(),
             ok;
@@ -191,8 +184,7 @@ loop(State)->
             NewState = case change_state(WxEvent,State) of
                            same -> State;
                            NState ->
-                               draw(NState),
-                               NState
+                               draw(NState)
                        end,
             loop(NewState)
     end.
