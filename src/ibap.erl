@@ -58,7 +58,7 @@ analyze(FolderName, GU, {FromCore,ToCore}, Mode)->
     io:write({{decode_time,GU},qutils:round(timer:now_diff(DT2,DT)/1000000,2)}),io:nl(),
     MaxZoomLevel = erlang:trunc(math:log(Longest)/math:log(2))+1, % up to 256px
     DT3 = erlang:now(),
-    generate_zoom_lvls(DetsNameList,{FromCore,ToCore},MaxZoomLevel,MaxKeysList),
+    generate_zoom_lvls(DetsNameList,{FromCore,ToCore},MaxZoomLevel,MaxKeysList,Longest),
     io:write({{zoom_level_time,GU},
               qutils:round(timer:now_diff(erlang:now(),DT3)/1000000,2)}),
     io:nl().
@@ -332,21 +332,21 @@ decode_all(FolderName,DetsNameList,GU,{FromCore,ToCore}, Mode)->
                   end, List),
     [receive {decoder, N} -> N end || _ <- List].
 
-generate_zoom_lvl(PID,DetsName,CoreID,MaxZoomOut,Z0MaxKey,CoreN)->
+generate_zoom_lvl(PID,DetsName,CoreID,MaxZoomOut,Z0MaxKey,CoreN,Longest)->
     {ok,Dets}=dets:open_file(DetsName),
     lists:foreach(fun(OldZoom)->
                           MaxKey = qutils:ceiling(Z0MaxKey/math:pow(2,OldZoom)),
                           traverse(Dets,CoreID,OldZoom,lists:seq(1,MaxKey))
                   end, lists:seq(0,MaxZoomOut)),
     if CoreID =:= 1 ->
-            ok = dets:insert(Dets, {init_state,MaxZoomOut,CoreN});
+            ok = dets:insert(Dets, {init_state,MaxZoomOut,CoreN,Longest});
        true -> ok
     end,
     ok = dets:close(Dets),
     PID ! done,          
     ok.
 
-generate_zoom_lvls(DetsNameList,{FromCore,ToCore},MaxZoomOut,Z0MaxLength)->
+generate_zoom_lvls(DetsNameList,{FromCore,ToCore},MaxZoomOut,Z0MaxLength,Longest)->
     Z0MaxKeys=lists:map(fun({CoreID,X})->
                                 {CoreID,qutils:ceiling(X/?DETS_PACK_SIZE)}
                         end,Z0MaxLength),
@@ -355,7 +355,8 @@ generate_zoom_lvls(DetsNameList,{FromCore,ToCore},MaxZoomOut,Z0MaxLength)->
                           Self = self(),
                           spawn(fun() -> generate_zoom_lvl(Self,DetsName,CoreID,
                                                            MaxZoomOut,Z0MaxKey,
-                                                           ToCore-FromCore+1)
+                                                           ToCore-FromCore+1,
+                                                          Longest)
                                 end)
                   end, Z0MaxKeys),
     _ = [receive done -> ok end || _ <- lists:seq(FromCore,ToCore)],

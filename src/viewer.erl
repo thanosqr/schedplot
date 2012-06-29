@@ -38,14 +38,20 @@
 
 -spec start(file:filename()) -> 'ok'.
 start(FolderName)->
-    {Frame,Panel} = wx_init(),
-    Width = ?WIDTH,
-    Height = ?HEIGHT,
     Options = [{access, read}],
     Prefix = FolderName ++ "/analyzed_trace",
     HBets = bets:open_file(Prefix ++ "1", Options, 1),
-    [{init_state,Max_Zoom,CoreN}] = bets:plain_lookup_otr(HBets, init_state),
-    Zoom=Max_Zoom-trunc(math:log(Width)/math:log(2)), %%zoom_make
+    [{init_state,_Max_Zoom,CoreN,Longest}] = bets:plain_lookup_otr(HBets, init_state),
+
+    %%    Zoom=Max_Zoom-trunc(math:log(Width)/math:log(2)), %%zoom_make
+    VertZ    = 16/127,
+    PWidth   = ?WIDTH+?PW_DIFF,
+    PHeight  = ?HEIGHT+?PH_DIFF,
+    Zoom     = trunc(math:log(1+Longest/PWidth)/math:log(2))+1,
+    Width    = min(PWidth, trunc(Longest/math:pow(2,Zoom))) - ?PW_DIFF + 42,
+    CoreInt  = qutils:strunc(VertZ*?GRAPH_HEIGHT)+?SPACE_BETW_CORES,
+    Height   = min(PHeight, trunc((CoreN+2)*CoreInt)) - ?PH_DIFF,
+    {Frame,Panel} = wx_init(Width,Height),
     TBets = lists:map(fun(CoreID)->
                               FName = Prefix ++ integer_to_list(CoreID),
                               bets:open_file(FName, Options, CoreID)
@@ -64,7 +70,7 @@ start(FolderName)->
             wxStaticText:setLabel(lists:last(SchedLabels), "GC")
     end,
     Zoom_Label = wxStaticText:new(Frame,?ANY,"",
-                                  [{pos,{?PWIDTH+?ZLW,?PHEIGHT+?ZLH}}]),
+                                  [{pos,{Width+?PW_DIFF+?ZLW,Height+?PH_DIFF+?ZLH}}]),
     State = #state{ zpos  = Zoom,
                     coren = CoreN,
                     data = [HBets|TBets],
@@ -81,16 +87,16 @@ start(FolderName)->
     NState = draw(State),
     loop(NState).
 
-wx_init()->
+wx_init(Width,Height)->
     Wx=wx:new(),
-    Frame=wxFrame:new(Wx,?ANY,"",[{size,{?WIDTH,?HEIGHT}}]),  
+    Frame=wxFrame:new(Wx,?ANY,"",[{size,{Width,Height}}]),  
     MenuBar = wxMenuBar:new(),
     File = wxMenu:new(),
     wxMenu:append(File,?EXIT,"Quit"),
     wxMenuBar:append(MenuBar,File,"&File"),
     wxFrame:setMenuBar(Frame,MenuBar),
     wxFrame:show(Frame),
-    Panel = create_panel(Frame,?PWIDTH,?PHEIGHT),
+    Panel = create_panel(Frame,Width+?PW_DIFF,Height+?PH_DIFF),
     lists:foreach(fun(XX) ->
                           wxEvtHandler:connect(Frame,XX) 
                   end, [command_menu_selected,size]),

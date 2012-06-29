@@ -17,6 +17,8 @@
 -define(DEF_GU,3).
 -define(GU,8).
 
+-define(GRAPH_HEIGHT,127).
+-define(SPACE_BETW_CORES,25).
 -define(HEIGHT,700).
 -define(PHEIGHT,?HEIGHT-100).
 -define(PWIDTH,1000).

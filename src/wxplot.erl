@@ -16,8 +16,7 @@
 
 -include("hijap.hrl").
 
--define(GRAPH_HEIGHT,127).
--define(SPACE_BETW_CORES,25).
+
 -define(LGrey,?wxLIGHT_GREY_PEN).
 -define(Black,?wxBLACK_PEN).
 -define(MGrey,?wxMEDIUM_GREY_PEN).
