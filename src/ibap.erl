@@ -45,7 +45,7 @@
 -type core_range()  :: {core_id(), core_id()}.
 -type packet_mode() :: 'full_packet' | 'time_packet'.
 
--spec analyze(qijap:folder(), gu(), core_range(), packet_mode()) -> 'ok'.
+-spec analyze(schedplot:folder(), gu(), core_range(), packet_mode()) -> 'ok'.
 
 analyze(FolderName, GU, {FromCore,ToCore}, Mode)->
     DetsNameList=lists:map(fun(CoreID)->
@@ -55,12 +55,12 @@ analyze(FolderName, GU, {FromCore,ToCore}, Mode)->
     MaxKeysList = decode_all(FolderName,DetsNameList,GU,{FromCore,ToCore}, Mode),
     Longest = lists:max(lists:map(fun({_,X}) -> X end, MaxKeysList)),
     DT2 = erlang:now(),
-    io:write({{decode_time,GU},qutils:round(timer:now_diff(DT2,DT)/1000000,2)}),io:nl(),
+    io:write({round(timer:now_diff(DT2,DT)/1000),{decode_time,GU}}),io:nl(),
     MaxZoomLevel = erlang:trunc(math:log(Longest)/math:log(2))+1, % up to 256px
     DT3 = erlang:now(),
     generate_zoom_lvls(DetsNameList,{FromCore,ToCore},MaxZoomLevel,MaxKeysList,Longest),
-    io:write({{zoom_level_time,GU},
-              qutils:round(timer:now_diff(erlang:now(),DT3)/1000000,2)}),
+    io:write({
+              round(timer:now_diff(erlang:now(),DT3)/1000),{zoom_level_time,GU}}),
     io:nl().
 
 get_packet(Bytes, Mode) ->

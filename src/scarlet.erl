@@ -4,14 +4,14 @@
 
 -include("hijap.hrl").
 
--spec open(qijap:folder()) -> dict().
+-spec open(schedplot:folder()) -> dict().
 open(FolderName) ->
     F = FolderName ++ "/scarlet",
     {ok, S} = file:open(F, [read]),
     {ok, L} = io:read(S, ''),
     dict:from_list(L).
 
--spec init(qijap:folder(), erlang:timestamp()) -> 'ok'.
+-spec init(schedplot:folder(), erlang:timestamp()) -> 'ok'.
 init(FolderName, T0) ->
     PID = spawn(fun() -> loop([], T0, FolderName) end),
     qutils:reregister(scarlet, PID).
@@ -23,7 +23,7 @@ close() ->
 	scarlet_done -> ok
     end.
 
--spec print(qijap:label()) -> 'ok'.
+-spec print(schedplot:label()) -> 'ok'.
 print(Label) ->
     T = erlang:now(),
     SID = erlang:system_info(scheduler_id),

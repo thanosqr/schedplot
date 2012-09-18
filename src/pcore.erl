@@ -4,7 +4,7 @@
 
 -include("hijap.hrl").
 
--spec start(function(), qijap:folder(), non_neg_integer(), qijap:start_flags()) -> 'ok'.
+-spec start(function(), schedplot:folder(), non_neg_integer(), schedplot:start_flags()) -> 'ok'.
 start(Fun, FolderName, CoreN, Flags) ->
     create_folder(FolderName),
     HName = FolderName ++ "/trace_gabi_header",
@@ -43,6 +43,7 @@ start(Fun, FolderName, CoreN, Flags) ->
     	true ->
     	    erlang:trace(PIDapply,true,[garbage_collection|TFlags])
     end,
+    Time0 = now(),
     PIDapplyT ! {start,self()},
     receive
         apply_done -> ok
@@ -50,7 +51,8 @@ start(Fun, FolderName, CoreN, Flags) ->
     case lists:member(no_auto_stop,Flags) of
         true  -> ok;
         false -> stop()
-    end.
+    end,
+    io:write({round(timer:now_diff(now(),Time0)/1000),profile}),io:nl().
 
 wait_apply(Fun)->
     receive

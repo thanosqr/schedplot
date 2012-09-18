@@ -16,13 +16,13 @@ Types:
 	   FolderName = name()
 	   Flags = [Flag]
 
-qijap:start/3 will profile Fun and store the trace in FolderName.
-if no FolderName is given, the default name will be used (qijap_profile)
+schedplot:start/3 will profile Fun and store the trace in FolderName.
+if no FolderName is given, the default name will be used (schedplot_profile)
 if there is a directory with the same name traces will be stored in that directory (older traces will the default names will be overwritten).
 
 Flags:
 no_auto_stop
-	the profiling will not stop when Fun returns but will continue untill qijap:stop/0 is called. note that the profiling will stop if stop/0 is called even if this flag wasnt used.
+	the profiling will not stop when Fun returns but will continue untill schedplot:stop/0 is called. note that the profiling will stop if stop/0 is called even if this flag wasnt used.
 
 gc
 	profile and display the garbage collection
@@ -50,11 +50,11 @@ displays the analyzed trace. if no name is given, the default name will be used.
 
 ------------------- Labels -------------------
 
-Anywhere in the traced program qijap:print(Text) may be called where Text is a string. This will place a red vertical line, with a label displaying Text, at the graph of the shceduler in which the process was running in when qijap:print/1 was called.
+Anywhere in the traced program schedplot:print(Text) may be called where Text is a string. This will place a red vertical line, with a label displaying Text, at the graph of the shceduler in which the process was running in when schedplot:print/1 was called.
 
 Note that the text of labels that are too close may overlap and the vertical line will hide part of the graph.
 
-Warning: qijap:print/1 is not supposed to be used a lot of times; it is supposed to be the equivalent of printing messages during debugging. A lot of calls may consume a significant amount of memory, depending on the size of Text as well as slow down the viewing process.
+Warning: schedplot:print/1 is not supposed to be used a lot of times; it is supposed to be the equivalent of printing messages during debugging. A lot of calls may consume a significant amount of memory, depending on the size of Text as well as slow down the viewing process.
 
 ----------------- Graph Keys -----------------
 

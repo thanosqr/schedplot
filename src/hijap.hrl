@@ -7,7 +7,7 @@
 -define(DEFAULT_FNAME, "trace_famdict").
 -define(DEFAULT_GNAME, "trace_gabi").
 -define(DEFAULT_TNAME, "analyzed_trace").
--define(DEFAULT_FOLDER_NAME, "qijap_profile").
+-define(DEFAULT_FOLDER_NAME, "schedplot_profile").
 
 -define(VERTICAL_INT,100).
 -define(MAX_DUR,63).

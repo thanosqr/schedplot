@@ -34,7 +34,7 @@
 %%%% MFALib = [{F,A,[M]}]
 
 -spec open(file:filename(), file:filename(),
-	   erlang:timestamp(), qijap:start_flags()) -> pabi().
+	   erlang:timestamp(), schedplot:start_flags()) -> pabi().
 open(NameData, NameFamDict, PrevTime, Flags) ->
     {ok, S} = file:open(NameData, [write, raw, compressed]),
     FamDict = case lists:member(trace_mfa, Flags) of

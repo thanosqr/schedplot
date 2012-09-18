@@ -35,7 +35,7 @@ highlight(Paint, X1, X2, Y) ->
     wxDC:setPen(Paint,?DEF_C).
     
 
--spec label_portray(integer()) -> qijap:label().
+-spec label_portray(integer()) -> schedplot:label().
 label_portray(N) when N < 0 ->
     "-" ++ label_portray(-N);
 label_portray(N)->
