@@ -1,8 +1,5 @@
-Early stages of development
-
------------------ Compiling -----------------
-
-Simply use make:all().
+------------------------ Compiling --------------------------
+Use the Emakefile by calling make:all() from the erlang shell.
 
 ----------------- Basic Interface Functions -----------------
 
