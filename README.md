@@ -19,7 +19,7 @@ Types:
 	   FolderName = name()  
 	   Flags = [Flag]  
 
-`schedplot:start/3` will profile Fun and store the trace in FolderName.  
+schedplot:start/3 will profile Fun and store the trace in FolderName.  
 If no FolderName is given, the default name will be used (schedplot_profile).  
 If there is a directory with the same name, the traces will be stored in that directory (older traces will the default names will be overwritten).
 
