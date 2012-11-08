@@ -9,10 +9,10 @@ For a detailed guide refer to Chapter 3 of my thesis (thesis.pdf)
 Basic Interface
 ===============
 
-        start(Fun) -> ok
-        start(Fun,Flags) -> ok
-        start(Fun,FolderName) -> ok
-        start(Fun,FolderName,Flags) -> ok
+start(Fun) -> ok
+start(Fun,Flags) -> ok
+start(Fun,FolderName) -> ok
+start(Fun,FolderName,Flags) -> ok
 
 Types: 
 	   Fun = {Module, Function, Args} | function()
